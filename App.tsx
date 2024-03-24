@@ -30,13 +30,12 @@ export default function App() {
           options={{
             title: 'Onboarding',
             headerShown: false,
-
           }}
         />
         <Stack.Screen
           name="SignInScreen"
           component={SignInScreen}
-          options={{ title: 'Sign In' }}
+          options={{ title: 'Sign In', headerShown: false }}
         />
         {Platform.OS === 'web' && (
           <Stack.Screen
@@ -48,7 +47,6 @@ export default function App() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-
 }
 
 const styles = StyleSheet.create({

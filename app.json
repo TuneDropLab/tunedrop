@@ -14,8 +14,10 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme":"tunedrop",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "app.example.tunedrop"
     },
     "android": {
       "adaptiveIcon": {

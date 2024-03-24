@@ -13,6 +13,7 @@ export default function OnboardingScreen() {
     <Onboarding
 
       onDone={() => navigation.navigate('SignInScreen')}
+      onSkip={() => navigation.navigate('SignInScreen')}
       pages={[
         {
           backgroundColor: '#fff',

@@ -1,173 +1,119 @@
-import React, { useState } from 'react';
-import { Alert, Button, Image, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-const logo = require("../../assets/icon.png");
-const facebook = require("../../assets/icon.png");
-const linkedin = require("../../assets/icon.png");
-const tiktok = require("../../assets/icon.png");
+import React, { useEffect } from 'react';
+import { Button, View, StyleSheet, SafeAreaView, Text, Pressable } from 'react-native';
+import { ResponseType, makeRedirectUri, useAuthRequest, AuthRequestConfig } from "expo-auth-session";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import { Entypo, MaterialIcons, AntDesign } from "@expo/vector-icons";
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// contact me :)
-// instagram: must_ait6
-// email : mustapha.aitigunaoun@gmail.com
+WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginForm() {
-    const [click, setClick] = useState(false);
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
+function SignInScreen() {
+    const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+    const discovery = {
+        authorizationEndpoint: 'http://localhost:3000/auth/spotify',
+        // tokenEndpoint: 'https://accounts.spotify.com/api/token',
+    };
+
+    const redirectUri = makeRedirectUri({
+        // preferLocalhost: true,
+        native: "com.example.tunedrop://redirect",
+        // scheme: "tunedrop",
+        // useProxy: true
+        // path: "/auth/spotify/callback",
+        // native: "http://localhost:3000/auth/spotify/callback",
+        // useProxy: true,
+    });
+
+    const [request, response, promptAsync] = useAuthRequest(
+        {
+            clientId: 'f330ce3d36274e8b92c59b4429ead10c',
+            clientSecret: "5ec83f824a6b477cb8c0370d597f0571",
+            // scopes: ['user-read-email', 'playlist-modify-public'],
+            // To follow the "Authorization Code Flow" to fetch token after authorizationEndpoint
+            // this must be set to false
+            usePKCE: false,
+            redirectUri: redirectUri,
+        },
+        discovery
+    );
+
+    useEffect(() => {
+        console.log("request ", request?.url);
+        console.log("RESPONSE BEFORE", response);
+        if (response?.type === "success") {
+            const jwt = response.params.access_token;
+            console.log("JWT IS ", jwt);
+            storeAuthInfo(jwt);
+
+        }
+        console.log("RESPONSE ", response);
+    }, [response]);
+
+    const storeAuthInfo = async (jwt: any) => {
+        try {
+            await AsyncStorage.setItem("@authToken", jwt);
+            // After storing the token, close the in-app browser and navigate to the home page
+            WebBrowser.dismissBrowser();
+            navigation.navigate('Home'); // Assuming your home page is named 'Home'
+        } catch (e) {
+            console.error("Error storing auth info", e);
+        }
+    };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <Image source={logo} style={styles.image} resizeMode="contain" />
-            <Text style={styles.optionsText}>CONTINUE WITH SPOTIFY</Text>
-
-
-
-
-            <View style={styles.mediaIcons}>
-                <Image source={facebook} style={styles.icons} />
-            </View>
-
-            <View style={styles.buttonView}>
-                <Pressable
-                    style={styles.button}
-                    onPress={() =>
-                        Alert.alert(
-                            "Signed Successfuly!"
-                        )
-                    }
+        <LinearGradient colors={["#040306", "#131624"]} style={{ flex: 1 }}>
+            <SafeAreaView>
+                <View style={{ height: 80 }} />
+                <Entypo
+                    name="air"
+                    size={80}
+                    color="white"
+                    style={{ textAlign: "center" }}
+                />
+                <Text
+                    style={{
+                        textAlign: "center",
+                        color: "white",
+                        fontSize: 40,
+                        fontWeight: "bold",
+                        marginTop: 40,
+                    }}
                 >
-                    <Text style={styles.buttonText}>
-                        <Image source={facebook} style={styles.icons} />
-                    </Text>
+                    TuneDrop
+                </Text>
+                <View style={{ height: 80 }} />
+                <Pressable
+                    onPress={() => {
+                        promptAsync();
+                    }}
+                    style={{
+                        backgroundColor: "#30FF8A",
+                        padding: 10,
+                        marginLeft: "auto",
+                        marginRight: "auto",
+                        width: 300,
+                        borderRadius: 25,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginVertical: 10,
+                    }}
+                >
+                    <Text className="">Sign in with Spotify</Text>
                 </Pressable>
-
-                {/* <Text style={styles.optionsText}>CONTINUE WITH SPOTIFY</Text> */}
-            </View>
-
-            <View style={styles.rememberView}>
-                <View style={styles.switch}>
-                    <Switch
-                        value={click}
-                        onValueChange={setClick}
-                        trackColor={{ true: "green", false: "gray" }}
-                    />
-                    <Text style={styles.rememberText}>Remember Me</Text>
-                </View>
-
-                {/* <View>
-                    <Pressable onPress={() => Alert.alert("Forget Password!")}>
-                        <Text style={styles.forgetText}>Forgot Password?</Text>
-                    </Pressable>
-                </View> */}
-            </View>
-
-
-
-            {/* <Text style={styles.footerText}>
-                Don't Have Account?
-                <Text style={styles.signup}> Sign Up</Text>
-            </Text> */}
-        </SafeAreaView>
+            </SafeAreaView>
+        </LinearGradient>
     );
-}
-
-
-
+};
 
 const styles = StyleSheet.create({
     container: {
-        alignItems: "center",
-        paddingTop: 70,
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    image: {
-        height: 160,
-        width: 170
-    },
-    title: {
-        fontSize: 30,
-        fontWeight: "bold",
-        textTransform: "uppercase",
-        textAlign: "center",
-        paddingVertical: 40,
-        color: "red"
-    },
-    inputView: {
-        gap: 15,
-        width: "100%",
-        paddingHorizontal: 40,
-        marginBottom: 5
-    },
-    input: {
-        height: 50,
-        paddingHorizontal: 20,
-        borderColor: "red",
-        borderWidth: 1,
-        borderRadius: 7
-    },
-    rememberView: {
-        width: "100%",
-        paddingHorizontal: 50,
-        justifyContent: "space-between",
-        alignItems: "center",
-        flexDirection: "row",
-        marginBottom: 8
-    },
-    switch: {
-        flexDirection: "row",
-        gap: 1,
-        justifyContent: "center",
-        alignItems: "center"
-
-    },
-    rememberText: {
-        fontSize: 13
-    },
-    forgetText: {
-        fontSize: 11,
-        color: "red"
-    },
-    button: {
-        backgroundColor: "gray",
-        height: 70,
-        borderColor: "gray",
-        borderWidth: 1,
-        borderRadius: 5,
-        alignItems: "center",
-        justifyContent: "center"
-    },
-    buttonText: {
-        color: "white",
-        fontSize: 18,
-        fontWeight: "bold"
-    },
-    buttonView: {
-        width: "100%",
-        paddingHorizontal: 50,
-        paddingVertical: 20
-    },
-    optionsText: {
-        textAlign: "center",
-        paddingVertical: 10,
-        color: "gray",
-        fontSize: 23,
-        marginBottom: 6
-    },
-    mediaIcons: {
-        flexDirection: "row",
-        gap: 15,
-        alignItems: "center",
-        justifyContent: "center",
-        marginBottom: 23
-    },
-    icons: {
-        width: 40,
-        height: 40,
-    },
-    footerText: {
-        textAlign: "center",
-        color: "gray",
-    },
-    signup: {
-        color: "red",
-        fontSize: 13
-    }
 });
+
+export default SignInScreen;
