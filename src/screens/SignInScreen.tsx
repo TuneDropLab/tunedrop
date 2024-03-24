@@ -13,14 +13,14 @@ WebBrowser.maybeCompleteAuthSession();
 function SignInScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: 'http://localhost:3000/auth/spotify',
-        // tokenEndpoint: 'https://accounts.spotify.com/api/token',
+        authorizationEndpoint: 'https://accounts.spotify.com/authorize',
+        tokenEndpoint: 'https://accounts.spotify.com/api/token',
     };
 
     const redirectUri = makeRedirectUri({
-        // preferLocalhost: true,
-        native: "com.example.tunedrop://redirect",
-        // scheme: "tunedrop",
+        preferLocalhost: true,
+        // native: "com.example.tunedrop://redirect",
+        scheme: "tunedrop",
         // useProxy: true
         // path: "/auth/spotify/callback",
         // native: "http://localhost:3000/auth/spotify/callback",
@@ -35,7 +35,7 @@ function SignInScreen() {
             // To follow the "Authorization Code Flow" to fetch token after authorizationEndpoint
             // this must be set to false
             usePKCE: false,
-            redirectUri: redirectUri,
+            redirectUri: "exp://127.0.0.1:19000/",
         },
         discovery
     );
@@ -44,8 +44,8 @@ function SignInScreen() {
         console.log("request ", request?.url);
         console.log("RESPONSE BEFORE", response);
         if (response?.type === "success") {
-            const jwt = response.params.access_token;
-            console.log("JWT IS ", jwt);
+            const jwt = response.params.code;
+            console.log("response IS ", response);
             storeAuthInfo(jwt);
 
         }
@@ -57,7 +57,7 @@ function SignInScreen() {
             await AsyncStorage.setItem("@authToken", jwt);
             // After storing the token, close the in-app browser and navigate to the home page
             WebBrowser.dismissBrowser();
-            navigation.navigate('Home'); // Assuming your home page is named 'Home'
+            navigation.navigate('HomeScreen'); // Assuming your home page is named 'Home'
         } catch (e) {
             console.error("Error storing auth info", e);
         }
