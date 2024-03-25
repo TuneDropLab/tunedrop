@@ -1,5 +1,5 @@
 {
-  "name": "findnewmusic",
+  "name": "tunedrop",
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -37,7 +37,7 @@
     "react-native-web-storage": "^0.2.2",
     "react-native-webview": "^13.8.2",
     "react-query": "^3.39.3",
-    "unsplash-js": "^7.0.19"
+    "@sentry/react-native": "5.19.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
