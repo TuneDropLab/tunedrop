@@ -49,7 +49,7 @@ function SignInScreen() {
         // console.log("RESPONSE BEFORE", response);
         console.log("RESPONSE TYPE: ", response?.type);
 
-        if (response?.type === "success") {
+        if (response?.type === "success" || response?.type === "error") {
             console.log("RESPONSE ", response);
             setUserAuthObj(response);
         }
@@ -98,16 +98,16 @@ function SignInScreen() {
 
     const getTopArtists = async () => {
         try {
-            const accessToken = await AsyncStorage.getItem("@jwt");
-            console.log("JWT", accessToken);
-            if (!accessToken) {
+            const jwtToken = await AsyncStorage.getItem("@jwt");
+            console.log("JWT", jwtToken);
+            if (!jwtToken) {
                 throw new Error('Access token not found');
             }
             
             const response = await fetch('http://localhost:3000/spotify/top-artists', {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${jwtToken}`,
                     'Content-Type': 'application/json',
                 },
             });
