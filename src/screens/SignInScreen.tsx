@@ -31,13 +31,13 @@ function SignInScreen() {
 
     const [request, response, promptAsync] = useAuthRequest(
         {
-            clientId: 'f330ce3d36274e8b92c59b4429ead10c',
-            clientSecret: "5ec83f824a6b477cb8c0370d597f0571",
+            clientId: process.env.SPOTIFY_CLIENT_ID ?? '',
+            clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
             // scopes: ['user-read-email', 'playlist-modify-public'],
             // To follow the "Authorization Code Flow" to fetch token after authorizationEndpoint
             // this must be set to false
             usePKCE: false,
-            redirectUri: "exp://172.20.10.3:8081/",
+            redirectUri: "exp://192.168.8.125:8081/",
         },
         discovery
     );
@@ -46,10 +46,11 @@ function SignInScreen() {
         console.log("request ", request);
         WebBrowser.dismissBrowser();
         WebBrowser.dismissAuthSession();
-        console.log("RESPONSE BEFORE", response);
+        // console.log("RESPONSE BEFORE", response);
         console.log("RESPONSE TYPE: ", response?.type);
 
-        if (response?.type === "success" || response?.type === "error") {
+        if (response?.type === "success") {
+            console.log("RESPONSE ", response);
             setUserAuthObj(response);
         }
     }, [response]);
@@ -59,6 +60,7 @@ function SignInScreen() {
             console.log(`[USER AUTH OBJ]: `, userAuthObj);
             const jwt = userAuthObj.params.jwt;
             storeAuthInfo(userAuthObj);
+            getTopArtists();
         }
     }, [userAuthObj]);
 
@@ -84,6 +86,7 @@ function SignInScreen() {
                 userAuthStuff.params.refresh_token
             );
             // await AsyncStorage.setItem('@userInfo', JSON.stringify(userInfo));
+            await AsyncStorage.setItem("@jwt", userAuthStuff.params.jwt)
             console.log("STORED ACCESS TOKEN: ", storedAccessToken);
             navigation.navigate('HomeScreen');
 
@@ -92,6 +95,35 @@ function SignInScreen() {
             console.error("Error storing auth info", e);
         }
     };
+
+    const getTopArtists = async () => {
+        try {
+            const accessToken = await AsyncStorage.getItem("@jwt");
+            console.log("JWT", accessToken);
+            if (!accessToken) {
+                throw new Error('Access token not found');
+            }
+            
+            const response = await fetch('http://localhost:3000/spotify/top-artists', {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            // console.log('response', response);
+            if (response.ok) {
+                const data = await response.json();
+                console.log("User's top artists:", data);
+                // Handle the received data as needed
+            } else {
+                console.error('Failed to fetch top artists:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Error fetching top artists:', error);
+        }
+    };
+    
 
     //     const token = extractTokenFromUrl(result.url);
     //     if (token) {
