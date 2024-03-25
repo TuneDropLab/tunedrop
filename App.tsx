@@ -10,6 +10,7 @@ import 'react-native-gesture-handler';
 import LandingScreen from './src/screens/LandingScreen';
 import { useAuth } from './src/context/AuthContext';
 import * as Sentry from "@sentry/react-native";
+import TutorialScreen from './src/screens/TutorialScreen';
 
 
 Sentry.init({
@@ -23,7 +24,7 @@ Sentry.init({
 
 const Stack = createStackNavigator();
 
- function App() {
+function App() {
   // const isSignedIn = false; // Add your logic to check if the user is signed in
   const { isSignedIn, } = useAuth();
 
@@ -33,7 +34,7 @@ const Stack = createStackNavigator();
         <Stack.Screen
           name="HomeScreen"
           component={HomeScreen}
-          options={{ title: 'Home' }}
+          options={{ title: 'Home', headerShown: false }}
         />
         <Stack.Screen
           name="OnboardingScreen"
@@ -47,6 +48,11 @@ const Stack = createStackNavigator();
           name="SignInScreen"
           component={SignInScreen}
           options={{ title: 'Sign In', headerShown: false }}
+        />
+        <Stack.Screen
+          name="TutorialScreen"
+          component={TutorialScreen}
+          options={{ title: 'Tutorial', headerShown: false }}
         />
         {Platform.OS === 'web' && (
           <Stack.Screen
