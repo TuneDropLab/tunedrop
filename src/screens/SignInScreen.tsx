@@ -1,31 +1,33 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button, View, StyleSheet, SafeAreaView, Text, Pressable } from 'react-native';
-import { ResponseType, makeRedirectUri, useAuthRequest, AuthRequestConfig } from "expo-auth-session";
+import { ResponseType, makeRedirectUri, useAuthRequest, AuthRequestConfig, AuthSessionResult } from "expo-auth-session";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import { Entypo, MaterialIcons, AntDesign } from "@expo/vector-icons";
 import { ParamListBase, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
+import { jwtDecode } from 'jwt-decode';
+import "core-js/stable/atob";
 WebBrowser.maybeCompleteAuthSession();
 
 function SignInScreen() {
+    const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
         authorizationEndpoint: 'http://localhost:3000/auth/spotify',
         tokenEndpoint: 'http://localhost:3000/auth/spotify/callback',
     };
 
-    const redirectUri = makeRedirectUri({
-        preferLocalhost: true,
-        // native: "com.example.tunedrop://redirect",
-        scheme: "tunedrop",
-        // useProxy: true
-        // path: "/auth/spotify/callback",
-        // native: "http://localhost:3000/auth/spotify/callback",
-        // useProxy: true,
-    });
+    // const redirectUri = makeRedirectUri({
+    //     preferLocalhost: true,
+    //     // native: "com.example.tunedrop://redirect",
+    //     scheme: "tunedrop",
+    //     // useProxy: true
+    //     // path: "/auth/spotify/callback",
+    //     // native: "http://localhost:3000/auth/spotify/callback",
+    //     // useProxy: true,
+    // });
 
     const [request, response, promptAsync] = useAuthRequest(
         {
@@ -45,21 +47,47 @@ function SignInScreen() {
         WebBrowser.dismissBrowser();
         WebBrowser.dismissAuthSession();
         console.log("RESPONSE BEFORE", response);
-        if (response?.type === "success") {
-            const jwt = response.params.access_token;
-            console.log("response IS ", response);
-            storeAuthInfo(jwt);
+        console.log("RESPONSE TYPE: ", response?.type);
 
+        if (response?.type === "success" || response?.type === "error") {
+            setUserAuthObj(response);
         }
-        console.log("RESPONSE ", response);
     }, [response]);
 
-    const storeAuthInfo = async (jwt: any) => {
+    useEffect(() => {
+        if (userAuthObj !== null) {
+            console.log(`[USER AUTH OBJ]: `, userAuthObj);
+            const jwt = userAuthObj.params.jwt;
+            storeAuthInfo(userAuthObj);
+        }
+    }, [userAuthObj]);
+
+
+    const storeAuthInfo = async (userAuthStuff: any) => {
+
         try {
-            await AsyncStorage.setItem("@authToken", jwt);
-            // After storing the token, close the in-app browser and navigate to the home page
-            WebBrowser.dismissBrowser();
-            navigation.navigate('HomeScreen'); // Assuming your home page is named 'Home'
+            // Decode JWT to get user info
+            const jwt = jwtDecode(userAuthStuff.params.jwt);
+
+            // Store tokens and user info
+            await AsyncStorage.setItem(
+                "@accessToken",
+                userAuthStuff.params.access_token
+            );
+            // clg async storage to check
+            // console.log(await AsyncStorage.getItem("@refreshToken"));
+            const storedAccessToken = await AsyncStorage.getItem(
+                "@accessToken"
+            );
+            await AsyncStorage.setItem(
+                "@refreshToken",
+                userAuthStuff.params.refresh_token
+            );
+            // await AsyncStorage.setItem('@userInfo', JSON.stringify(userInfo));
+            console.log("STORED ACCESS TOKEN: ", storedAccessToken);
+            navigation.navigate('HomeScreen');
+
+            console.log("Authentication info stored successfully");
         } catch (e) {
             console.error("Error storing auth info", e);
         }
