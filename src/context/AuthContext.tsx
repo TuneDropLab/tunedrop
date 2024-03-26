@@ -1,47 +1,69 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// AuthContext.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-// Define the shape of the context
-interface AuthContextType {
-    isSignedIn: boolean;
-    checkSignIn: () => void;
-}
 
-// Create the context with a default value
-const AuthContext = createContext<AuthContextType>({
+
+
+const AuthContext = createContext({
     isSignedIn: false,
-    checkSignIn: () => { },
+    signIn: () => { },
+    signOut: () => { },
+
 });
 
-// Create a custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+    return useContext(AuthContext);
+};
 
-// AuthProvider component
-interface AuthProviderProps {
-    children: ReactNode;
-}
+export const AuthProvider = ({ children }: any) => {
+    const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
 
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-    const [isSignedIn, setIsSignedIn] = useState(false);
+    const [isSignedIn, setIsSignedIn] = useState(false); // Initialize with false
 
-    // Function to call the API and update the isSignedIn state
-    const checkSignIn = async () => {
-        try {
-            // Replace 'yourApiEndpoint' with your actual API endpoint
-            const response = await fetch('yourApiEndpoint');
-            const data = await response.json();
-            setIsSignedIn(data.isSignedIn); // Assuming the API returns an object with an isSignedIn boolean
-        } catch (error) {
-            console.error('Failed to fetch sign-in status:', error);
+    const signIn = async () => {
+
+        const jwt = await AsyncStorage.getItem('@jwt');
+        if (jwt !== null && jwt !== "") {
+            console.log("Retrieved JWT: ", jwt);
+            setIsSignedIn(true);
+            console.log("ISSIGNEDIN FROM SIGNIN FUNCTION: ", isSignedIn);
+            navigation.navigate('HomeScreen');
         }
+        console.log("SIGN IN JWT FROM CONTEXT IS ", jwt);
     };
 
-    // Call checkSignIn when the component mounts
     useEffect(() => {
-        checkSignIn();
+        const checkSignInStatus = async () => {
+            const jwtToken = await AsyncStorage.getItem('@jwt');
+            console.log("JWT TOKEN FROM STORAGE", jwtToken);
+            console.log("IS SIGNED IN", isSignedIn);
+            if (jwtToken && jwtToken !== "") {
+                setIsSignedIn(true);
+                // navigation.navigate('HomeScreen');
+            }
+            console.log("IS SIGNED IN", isSignedIn);
+        };
+
+        checkSignInStatus();
     }, []);
+    
+
+    const signOut = async () => {
+        // Logic to set isSignedIn to false
+        // check if jwt is in async storage and remove it
+        await AsyncStorage.removeItem('@jwt');
+        const jwt = await AsyncStorage.getItem('@jwt');
+        // navigate to sign in page
+        navigation.navigate('SignInScreen');
+        console.log("SIGN OUT JWT FROM CONTEXT IS ", jwt);
+        setIsSignedIn(false);
+    };
 
     return (
-        <AuthContext.Provider value={{ isSignedIn, checkSignIn }}>
+        <AuthContext.Provider value={{ isSignedIn, signIn, signOut }}>
             {children}
         </AuthContext.Provider>
     );
