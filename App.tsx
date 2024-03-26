@@ -8,7 +8,7 @@ import SignInScreen from './src/screens/SignInScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import 'react-native-gesture-handler';
 import LandingScreen from './src/screens/LandingScreen';
-import { useAuth } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import * as Sentry from "@sentry/react-native";
 import TutorialScreen from './src/screens/TutorialScreen';
 
@@ -26,43 +26,47 @@ const Stack = createStackNavigator();
 
 function App() {
   // const isSignedIn = false; // Add your logic to check if the user is signed in
-  const { isSignedIn, } = useAuth();
+  const { isSignedIn, signIn } = useAuth();
 
   return (
+
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isSignedIn ? "HomeScreen" : Platform.OS === 'web' ? "LandingScreen" : "OnboardingScreen"}>
-        <Stack.Screen
-          name="HomeScreen"
-          component={HomeScreen}
-          options={{ title: 'Home', headerShown: false }}
-        />
-        <Stack.Screen
-          name="OnboardingScreen"
-          component={OnboardingScreen}
-          options={{
-            title: 'Onboarding',
-            headerShown: false,
-          }}
-        />
-        <Stack.Screen
-          name="SignInScreen"
-          component={SignInScreen}
-          options={{ title: 'Sign In', headerShown: false }}
-        />
-        <Stack.Screen
-          name="TutorialScreen"
-          component={TutorialScreen}
-          options={{ title: 'Tutorial', headerShown: false }}
-        />
-        {Platform.OS === 'web' && (
+      <AuthProvider>
+        <Stack.Navigator initialRouteName={isSignedIn === true ? "HomeScreen" : "SignInScreen"}>
           <Stack.Screen
-            name="LandingScreen"
-            component={LandingScreen}
-            options={{ title: 'Landing' }}
+            name="HomeScreen"
+            component={HomeScreen}
+            options={{ title: 'Home', headerShown: false }}
           />
-        )}
-      </Stack.Navigator>
+          <Stack.Screen
+            name="OnboardingScreen"
+            component={OnboardingScreen}
+            options={{
+              title: 'Onboarding',
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="SignInScreen"
+            component={SignInScreen}
+            options={{ title: 'Sign In', headerShown: false }}
+          />
+          <Stack.Screen
+            name="TutorialScreen"
+            component={TutorialScreen}
+            options={{ title: 'Tutorial', headerShown: false }}
+          />
+          {Platform.OS === 'web' && (
+            <Stack.Screen
+              name="LandingScreen"
+              component={LandingScreen}
+              options={{ title: 'Landing' }}
+            />
+          )}
+        </Stack.Navigator>
+      </AuthProvider>
     </NavigationContainer>
+
   );
 }
 
