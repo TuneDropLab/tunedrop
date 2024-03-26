@@ -9,7 +9,7 @@ import { ParamListBase, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { jwtDecode } from 'jwt-decode';
 import "core-js/stable/atob";
-import { useAuth } from '../context/AuthContext';
+import { useAuthStore } from '../context/AuthContext';
 WebBrowser.maybeCompleteAuthSession();
 
 function SignInScreen() {
@@ -91,9 +91,17 @@ function SignInScreen() {
                 "@jwt"
             );
             console.log("STORED JWT TOKEN: ", jwt);
-            
-            signIn();
 
+            signIn();
+            navigation.reset(
+                {
+                    index: 0,
+                    routes: [{
+                        name: 'HomeScreen'
+                    }]
+                    ,
+                }
+            );
 
             console.log("Authentication info stored successfully");
         } catch (e) {
@@ -142,7 +150,8 @@ function SignInScreen() {
     // }
     // };
 
-    const { isSignedIn, signIn } = useAuth();
+    const { isSignedIn, signIn, signOut } = useAuthStore();
+
 
 
 

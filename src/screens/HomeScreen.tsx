@@ -3,8 +3,9 @@ import { View, Dimensions, Text, Button } from 'react-native';
 import Circle from '../components/MusicBubble';
 import { useSharedValue } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
-import { useAuth } from '../context/AuthContext';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../context/AuthContext';
 
 
 const HomeScreen = () => {
@@ -29,7 +30,8 @@ const HomeScreen = () => {
         setIsPaused((prevPaused) => !prevPaused);
     };
 
-    const { isSignedIn, signOut, signIn } = useAuth();
+    const { isSignedIn, signIn, signOut } = useAuthStore();
+
     const showJWT = async () => {
         try {
             const jwtToken = await AsyncStorage.getItem("@jwt");
