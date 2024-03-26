@@ -8,9 +8,11 @@ import SignInScreen from './src/screens/SignInScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import 'react-native-gesture-handler';
 import LandingScreen from './src/screens/LandingScreen';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
+
 import * as Sentry from "@sentry/react-native";
 import TutorialScreen from './src/screens/TutorialScreen';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from './src/context/AuthContext';
 
 
 Sentry.init({
@@ -25,47 +27,49 @@ Sentry.init({
 const Stack = createStackNavigator();
 
 function App() {
-  // const isSignedIn = false; // Add your logic to check if the user is signed in
-  const { isSignedIn, signIn } = useAuth();
+  const istest = false; // Add your logic to check if the user is signed in
+  const { isSignedIn, signIn, signOut } = useAuthStore();
+  const initialRouteName = isSignedIn ? 'HomeScreen' : 'SignInScreen';
+
 
   return (
 
+    // <AuthProvider>
     <NavigationContainer>
-      <AuthProvider>
-        <Stack.Navigator initialRouteName={isSignedIn === true ? "HomeScreen" : "SignInScreen"}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
+        <Stack.Screen
+          name="HomeScreen"
+          component={HomeScreen}
+          options={{ title: 'Home' }}
+        />
+        <Stack.Screen
+          name="OnboardingScreen"
+          component={OnboardingScreen}
+          options={{
+            title: 'Onboarding',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="SignInScreen"
+          component={SignInScreen}
+          options={{ title: 'Sign In' }}
+        />
+        <Stack.Screen
+          name="TutorialScreen"
+          component={TutorialScreen}
+          options={{ title: 'Tutorial' }}
+        />
+        {Platform.OS === 'web' && (
           <Stack.Screen
-            name="HomeScreen"
-            component={HomeScreen}
-            options={{ title: 'Home', headerShown: false }}
+            name="LandingScreen"
+            component={LandingScreen}
+            options={{ title: 'Landing' }}
           />
-          <Stack.Screen
-            name="OnboardingScreen"
-            component={OnboardingScreen}
-            options={{
-              title: 'Onboarding',
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="SignInScreen"
-            component={SignInScreen}
-            options={{ title: 'Sign In', headerShown: false }}
-          />
-          <Stack.Screen
-            name="TutorialScreen"
-            component={TutorialScreen}
-            options={{ title: 'Tutorial', headerShown: false }}
-          />
-          {Platform.OS === 'web' && (
-            <Stack.Screen
-              name="LandingScreen"
-              component={LandingScreen}
-              options={{ title: 'Landing' }}
-            />
-          )}
-        </Stack.Navigator>
-      </AuthProvider>
+        )}
+      </Stack.Navigator>
     </NavigationContainer>
+    // </AuthProvider>
 
   );
 }
@@ -78,5 +82,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
 
 export default Sentry.wrap(App);
