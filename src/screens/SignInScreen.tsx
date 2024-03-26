@@ -10,14 +10,16 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { jwtDecode } from 'jwt-decode';
 import "core-js/stable/atob";
 import { useAuthStore } from '../context/AuthContext';
+import { useQuery } from 'react-query';
+import { fetchTopArtists } from '../services/services';
 WebBrowser.maybeCompleteAuthSession();
 
 function SignInScreen() {
     const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: 'http://localhost:3000/auth/spotify',
-        tokenEndpoint: 'http://localhost:3000/auth/spotify/callback',
+        authorizationEndpoint: 'process.env.BASE_URLauth/spotify',
+        tokenEndpoint: 'process.env.BASE_URLauth/spotify/callback',
     };
 
     // const redirectUri = makeRedirectUri({
@@ -26,7 +28,7 @@ function SignInScreen() {
     //     scheme: "tunedrop",
     //     // useProxy: true
     //     // path: "/auth/spotify/callback",
-    //     // native: "http://localhost:3000/auth/spotify/callback",
+    //     // native: "process.env.BASE_URLauth/spotify/callback",
     //     // useProxy: true,
     // });
 
@@ -118,7 +120,7 @@ function SignInScreen() {
                 throw new Error('Access token not found');
             }
 
-            const response = await fetch('http://localhost:3000/spotify/top-artists', {
+            const response = await fetch('process.env.BASE_URLspotify/top-artists', {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${jwtToken}`,
@@ -137,6 +139,11 @@ function SignInScreen() {
             console.error('Error fetching top artists:', error);
         }
     };
+
+    const { data, isLoading, isError, status } = useQuery('topArtists', fetchTopArtists);
+
+    if (isLoading) return <div>Loading...</div>;
+    if (isError) return <div>Error: { }</div>;
 
 
     //     const token = extractTokenFromUrl(result.url);
