@@ -9,6 +9,7 @@ import { ParamListBase, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { jwtDecode } from 'jwt-decode';
 import "core-js/stable/atob";
+import { useAuthStore } from '../context/AuthContext';
 WebBrowser.maybeCompleteAuthSession();
 
 function SignInScreen() {
@@ -49,9 +50,11 @@ function SignInScreen() {
         // console.log("RESPONSE BEFORE", response);
         console.log("RESPONSE TYPE: ", response?.type);
 
-        if (response?.type === "success") {
+        if (response?.type === "success" || response?.type === "error") {
             console.log("RESPONSE ", response);
             setUserAuthObj(response);
+            signIn();
+
         }
     }, [response]);
 
@@ -69,7 +72,7 @@ function SignInScreen() {
 
         try {
             // Decode JWT to get user info
-            const jwt = jwtDecode(userAuthStuff.params.jwt);
+            // const jwt = jwtDecode(userAuthStuff.params.jwt);
 
             // Store tokens and user info
             await AsyncStorage.setItem(
@@ -78,17 +81,27 @@ function SignInScreen() {
             );
             // clg async storage to check
             // console.log(await AsyncStorage.getItem("@refreshToken"));
-            const storedAccessToken = await AsyncStorage.getItem(
-                "@accessToken"
-            );
             await AsyncStorage.setItem(
                 "@refreshToken",
                 userAuthStuff.params.refresh_token
             );
             // await AsyncStorage.setItem('@userInfo', JSON.stringify(userInfo));
-            await AsyncStorage.setItem("@jwt", userAuthStuff.params.jwt)
-            console.log("STORED ACCESS TOKEN: ", storedAccessToken);
-            navigation.navigate('HomeScreen');
+            await AsyncStorage.setItem("@jwt", userAuthStuff.params.jwt);
+            const jwt = await AsyncStorage.getItem(
+                "@jwt"
+            );
+            console.log("STORED JWT TOKEN: ", jwt);
+
+            signIn();
+            navigation.reset(
+                {
+                    index: 0,
+                    routes: [{
+                        name: 'HomeScreen'
+                    }]
+                    ,
+                }
+            );
 
             console.log("Authentication info stored successfully");
         } catch (e) {
@@ -98,16 +111,17 @@ function SignInScreen() {
 
     const getTopArtists = async () => {
         try {
-            const accessToken = await AsyncStorage.getItem("@jwt");
-            console.log("JWT", accessToken);
-            if (!accessToken) {
+
+            const jwtToken = await AsyncStorage.getItem("@jwt");
+            console.log("JWT", jwtToken);
+            if (!jwtToken) {
                 throw new Error('Access token not found');
             }
-            
+
             const response = await fetch('http://localhost:3000/spotify/top-artists', {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${accessToken}`,
+                    Authorization: `Bearer ${jwtToken}`,
                     'Content-Type': 'application/json',
                 },
             });
@@ -123,7 +137,7 @@ function SignInScreen() {
             console.error('Error fetching top artists:', error);
         }
     };
-    
+
 
     //     const token = extractTokenFromUrl(result.url);
     //     if (token) {
@@ -136,13 +150,9 @@ function SignInScreen() {
     // }
     // };
 
-    // Function to extract the token from the redirect URL
-    const extractTokenFromUrl = (url: any) => {
-        // Implement based on how your backend sends the token
-        // Example: yourapp://redirect#token=YOUR_TOKEN
-        const match = url.match(/token=([^#]+)/);
-        return match ? match[1] : null;
-    };
+    const { isSignedIn, signIn, signOut } = useAuthStore();
+
+
 
 
     return (
@@ -164,7 +174,7 @@ function SignInScreen() {
                         marginTop: 40,
                     }}
                 >
-                    TuneDrop
+                    TuneDrop {`CURRENTLY SIGNED IN? ${isSignedIn}`}
                 </Text>
                 <View style={{ height: 80 }} />
                 <Pressable

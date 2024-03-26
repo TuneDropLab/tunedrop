@@ -1,48 +1,39 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// src/store/auth.ts
+import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Define the shape of the context
-interface AuthContextType {
+type AuthState = {
     isSignedIn: boolean;
-    checkSignIn: () => void;
-}
-
-// Create the context with a default value
-const AuthContext = createContext<AuthContextType>({
-    isSignedIn: false,
-    checkSignIn: () => { },
-});
-
-// Create a custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
-
-// AuthProvider component
-interface AuthProviderProps {
-    children: ReactNode;
-}
-
-export const AuthProvider = ({ children }: AuthProviderProps) => {
-    const [isSignedIn, setIsSignedIn] = useState(false);
-
-    // Function to call the API and update the isSignedIn state
-    const checkSignIn = async () => {
-        try {
-            // Replace 'yourApiEndpoint' with your actual API endpoint
-            const response = await fetch('yourApiEndpoint');
-            const data = await response.json();
-            setIsSignedIn(data.isSignedIn); // Assuming the API returns an object with an isSignedIn boolean
-        } catch (error) {
-            console.error('Failed to fetch sign-in status:', error);
-        }
-    };
-
-    // Call checkSignIn when the component mounts
-    useEffect(() => {
-        checkSignIn();
-    }, []);
-
-    return (
-        <AuthContext.Provider value={{ isSignedIn, checkSignIn }}>
-            {children}
-        </AuthContext.Provider>
-    );
+    signIn: () => Promise<void>;
+    signOut: () => Promise<boolean>;
 };
+
+export const useAuthStore = create<AuthState>((set) => ({
+    isSignedIn: false,
+    signIn: async () => {
+        // Your sign-in logic here...
+        const jwt = await AsyncStorage.getItem('@jwt');
+        if (jwt !== null && jwt !== "") {
+            await AsyncStorage.setItem('isSignedIn', 'true');
+            set({ isSignedIn: true });
+        }
+    },
+    signOut: async () => {
+        try {
+            await AsyncStorage.removeItem('@jwt');
+            await AsyncStorage.setItem('isSignedIn', 'false');
+            set({ isSignedIn: false });
+            return true;
+        } catch (error) {
+            return false;
+        }
+    },
+}));
+
+// Load persisted state from AsyncStorage when the store is initialized
+(async () => {
+    const isSignedIn = await AsyncStorage.getItem('isSignedIn');
+    if (isSignedIn === 'true') {
+        useAuthStore.setState({ isSignedIn: true });
+    }
+})();
