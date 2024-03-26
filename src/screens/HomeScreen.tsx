@@ -6,9 +6,12 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../context/AuthContext';
-
+import { ParamListBase, useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const HomeScreen = () => {
+    const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+
     const [circles, setCircles] = useState<{ id: number; size: number; color: string; duration: number; }[]>([]);
     const ourColors = ['#FF0000', '#876E59', '#3046B6'];
     const sizes = useSharedValue([50, 100, 150]);
@@ -58,7 +61,11 @@ const HomeScreen = () => {
 
                     </Text>
 
-                    <Button title='Sign out' onPress={signOut}></Button>
+                    <Button title='Sign out' onPress={async () => {
+                        const signout = await signOut();
+
+                        signOut !== null && navigation.navigate('SignInScreen');
+                    }}></Button>
                     <Button title='Sign in' onPress={signIn}></Button>
 
                     <Button title='Show JWT' onPress={showJWT}></Button>

@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type AuthState = {
     isSignedIn: boolean;
     signIn: () => Promise<void>;
-    signOut: () => Promise<void>;
+    signOut: () => Promise<boolean>;
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -19,9 +19,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     },
     signOut: async () => {
-        await AsyncStorage.removeItem('@jwt');
-        await AsyncStorage.setItem('isSignedIn', 'false');
-        set({ isSignedIn: false });
+        try {
+            await AsyncStorage.removeItem('@jwt');
+            await AsyncStorage.setItem('isSignedIn', 'false');
+            set({ isSignedIn: false });
+            return true;
+        } catch (error) {
+            return false;
+        }
     },
 }));
 
