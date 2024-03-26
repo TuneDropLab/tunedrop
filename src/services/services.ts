@@ -6,7 +6,7 @@ export const fetchTopArtists = async () => {
     throw new Error('Access token not found');
   }
 
-  const response = await fetch('process.env.BASE_URLspotify/top-artists', {
+  const response = await fetch(`${process.env.BASE_URL}spotify/top-artists`, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${jwtToken}`,

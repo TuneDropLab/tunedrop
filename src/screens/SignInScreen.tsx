@@ -18,8 +18,8 @@ function SignInScreen() {
     const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: 'process.env.BASE_URLauth/spotify',
-        tokenEndpoint: 'process.env.BASE_URLauth/spotify/callback',
+        authorizationEndpoint: `${process.env.BASE_URL}auth/spotify`,
+        tokenEndpoint: `${process.env.BASE_URL}auth/spotify/callback`,
     };
 
     // const redirectUri = makeRedirectUri({
@@ -120,7 +120,7 @@ function SignInScreen() {
                 throw new Error('Access token not found');
             }
 
-            const response = await fetch('process.env.BASE_URLspotify/top-artists', {
+            const response = await fetch(`${process.env.BASE_URL}spotify/top-artists`, {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${jwtToken}`,
