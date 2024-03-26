@@ -1,70 +1,34 @@
-// AuthContext.tsx
+// src/store/auth.ts
+import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { ParamListBase, useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-
-
-
-const AuthContext = createContext({
-    isSignedIn: false,
-    signIn: () => { },
-    signOut: () => { },
-
-});
-
-export const useAuth = () => {
-    return useContext(AuthContext);
+type AuthState = {
+    isSignedIn: boolean;
+    signIn: () => Promise<void>;
+    signOut: () => Promise<void>;
 };
 
-export const AuthProvider = ({ children }: any) => {
-    const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
-
-    const [isSignedIn, setIsSignedIn] = useState(false); // Initialize with false
-
-    const signIn = async () => {
-
+export const useAuthStore = create<AuthState>((set) => ({
+    isSignedIn: false,
+    signIn: async () => {
+        // Your sign-in logic here...
         const jwt = await AsyncStorage.getItem('@jwt');
         if (jwt !== null && jwt !== "") {
-            console.log("Retrieved JWT: ", jwt);
-            setIsSignedIn(true);
-            console.log("ISSIGNEDIN FROM SIGNIN FUNCTION: ", isSignedIn);
-            navigation.navigate('HomeScreen');
+            await AsyncStorage.setItem('isSignedIn', 'true');
+            set({ isSignedIn: true });
         }
-        console.log("SIGN IN JWT FROM CONTEXT IS ", jwt);
-    };
-
-    useEffect(() => {
-        const checkSignInStatus = async () => {
-            const jwtToken = await AsyncStorage.getItem('@jwt');
-            console.log("JWT TOKEN FROM STORAGE", jwtToken);
-            console.log("IS SIGNED IN", isSignedIn);
-            if (jwtToken && jwtToken !== "") {
-                setIsSignedIn(true);
-                // navigation.navigate('HomeScreen');
-            }
-            console.log("IS SIGNED IN", isSignedIn);
-        };
-
-        checkSignInStatus();
-    }, []);
-    
-
-    const signOut = async () => {
-        // Logic to set isSignedIn to false
-        // check if jwt is in async storage and remove it
+    },
+    signOut: async () => {
         await AsyncStorage.removeItem('@jwt');
-        const jwt = await AsyncStorage.getItem('@jwt');
-        // navigate to sign in page
-        navigation.navigate('SignInScreen');
-        console.log("SIGN OUT JWT FROM CONTEXT IS ", jwt);
-        setIsSignedIn(false);
-    };
+        await AsyncStorage.setItem('isSignedIn', 'false');
+        set({ isSignedIn: false });
+    },
+}));
 
-    return (
-        <AuthContext.Provider value={{ isSignedIn, signIn, signOut }}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
+// Load persisted state from AsyncStorage when the store is initialized
+(async () => {
+    const isSignedIn = await AsyncStorage.getItem('isSignedIn');
+    if (isSignedIn === 'true') {
+        useAuthStore.setState({ isSignedIn: true });
+    }
+})();
