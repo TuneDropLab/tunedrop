@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
-  TouchableOpacity,
   Text,
   Dimensions,
   Image,
@@ -11,18 +10,21 @@ import {
 import Animated, {
   useSharedValue,
   withTiming,
-  useAnimatedStyle,
   Easing,
-  withSequence,
-  withDelay,
-  interpolateColor,
+  useAnimatedStyle,
   runOnJS,
 } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
+
+const { width, height } = Dimensions.get("window");
+const bubbleSize = 230;
+const animationDuration = 4000;
+const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
 
 type Recommendation = {
+    name: string;
   preview_url: string;
   album: {
     images: { url: string }[];
@@ -30,26 +32,22 @@ type Recommendation = {
   };
 };
 
-const { width, height } = Dimensions.get("window");
-const bubbleSize = 200;
-const animationDuration = 4000; // Slowed down animation duration
-const bubbleDelay = 1000; // Increased bubble delay
-const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
-
 const HomeScreen = () => {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [playedSongs, setPlayedSongs] = useState<string[]>([]);
-  const animatedValues = useSharedValue(0); // Initialize with 0
+  const [recommendationsQueue, setRecommendationsQueue] = useState<Recommendation[]>([]);
+  const [currentRecommendation, setCurrentRecommendation] = useState<Recommendation | null>(null);
+  const [bubbleColor, setBubbleColor] = useState<string>("");
+  const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
   const isPaused = useRef(false);
+  const animationValue = useSharedValue(-bubbleSize);
 
   const fetchRecommendations = useCallback(async () => {
+    if (isFetching) return; // Prevent multiple fetches
+    setIsFetching(true);
     try {
       const jwtToken = await AsyncStorage.getItem("@jwt");
-      console.log("JWT", jwtToken);
       if (!jwtToken) {
         throw new Error("Access token not found");
       }
-
       const response = await fetch(
         "http://localhost:3000/spotify/recommendations",
         {
@@ -62,83 +60,76 @@ const HomeScreen = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log("Recommendations:", data);
-        const newRecommendations = data.filter(
-          (recommendation: any) =>
-            !playedSongs.includes(recommendation.preview_url)
-        );
-        setRecommendations((prevRecommendations) => [
-          ...prevRecommendations,
-          ...newRecommendations,
-        ]);
+        setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
     } catch (error) {
       console.error("Error fetching recommendations:", error);
+    } finally {
+      setIsFetching(false); // Reset fetching status
     }
-  }, [playedSongs]);
+  }, [isFetching]); // Add isFetching to the dependency array
 
-  useEffect(() => {
-    fetchRecommendations();
-  }, [fetchRecommendations]);
-
-  useEffect(() => {
-    if (!isPaused.current && recommendations.length < 4) {
+  const checkAndFetchRecommendations = useCallback(() => {
+    if (!isPaused.current && recommendationsQueue.length < 4 && !isFetching) {
       fetchRecommendations();
     }
-  }, [recommendations, fetchRecommendations]);
+  }, [recommendationsQueue.length, isFetching, fetchRecommendations]);
+
+  useEffect(() => {
+    checkAndFetchRecommendations();
+  }, [checkAndFetchRecommendations]);
 
   const playPreview = async (previewUrl: string) => {
     try {
       isPaused.current = true;
       const { sound } = await Audio.Sound.createAsync({ uri: previewUrl });
       await sound.playAsync();
-      setPlayedSongs((prevPlayedSongs) => [...prevPlayedSongs, previewUrl]);
     } catch (error) {
       console.error("Error playing audio:", error);
     }
   };
 
   const animatedStyle = useAnimatedStyle(() => {
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomColorStart = colors[Math.floor(Math.random() * colors.length)];
-    const randomColorEnd = colors[Math.floor(Math.random() * colors.length)];
-    const bubbleColor = interpolateColor(
-      animatedValues.value,
-      [0, height + bubbleSize],
-      [randomColorStart, randomColorEnd]
-    );
     return {
-      backgroundColor: bubbleColor,
-      transform: [
-        {
-          translateY: withSequence(
-            withDelay(
-              isPaused.current ? 0 : bubbleDelay,
-              withTiming(height + bubbleSize, {
-                duration: isPaused.current ? 0 : animationDuration,
-                easing: Easing.linear,
-              })
-            ),
-            withTiming(0, { duration: 0 }) // Move bubble back to top
-          ),
-        },
-      ],
+      backgroundColor: bubbleColor, // Use the stable color
+      transform: [{ translateY: animationValue.value }],
     };
+  }, [bubbleColor]); // Depend on bubbleColor
+
+  const processNextRecommendation = useCallback(() => {
+    setRecommendationsQueue((currentQueue) => {
+      const nextQueue = [...currentQueue];
+      const nextRecommendation = nextQueue.shift();
+      setCurrentRecommendation(nextRecommendation || null);
+      return nextQueue;
+    });
   }, []);
 
-  useEffect(() => {
-    if (recommendations.length > 0) {
-      animatedValues.value = withDelay(
-        isPaused.current ? 0 : bubbleDelay,
-        withTiming(height + bubbleSize, {
-          duration: animationDuration,
-          easing: Easing.linear,
-        })
-      );
+  const startNextAnimation = useCallback(() => {
+    if (recommendationsQueue.length > 0) {
+      processNextRecommendation();
+      setBubbleColor(colors[Math.floor(Math.random() * colors.length)]);
+      animationValue.value = -bubbleSize;
+      animateBubble();
+    } else {
+      checkAndFetchRecommendations();
     }
-  }, [recommendations, animatedValues]);
+  }, [recommendationsQueue, processNextRecommendation, checkAndFetchRecommendations]);
+
+  const animateBubble = useCallback(() => {
+    animationValue.value = withTiming(height, {
+      duration: animationDuration,
+      easing: Easing.linear,
+    }, () => runOnJS(startNextAnimation)());
+  }, [startNextAnimation]);
+
+  useEffect(() => {
+    if (currentRecommendation === null && recommendationsQueue.length > 0) {
+      startNextAnimation();
+    }
+  }, [currentRecommendation, recommendationsQueue, startNextAnimation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -148,29 +139,37 @@ const HomeScreen = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={styles.bubbleContainer}>
-        {recommendations.map((recommendation, index) => (
-          <Animated.View
+      {/* Default bubbles at the top */}
+      <View style={styles.defaultBubblesContainer}>
+        {colors.map((color, index) => (
+          <View
             key={index}
-            style={[styles.bubble, animatedStyle]}
-            onLayout={() => {
-              if (!isPaused.current) {
-                animatedValues.value = 0; // Start animation for new bubble
-              }
-            }}
-          >
-            <TouchableOpacity
-              style={styles.bubbleContent}
-              onPress={() => playPreview(recommendation.preview_url)}
-            >
+            style={[styles.defaultBubble, { backgroundColor: color }]}
+          />
+        ))}
+      </View>
+      <View style={styles.defaultBubblesContainer2}>
+        {colors.reverse().map((color, index) => (
+          <View
+            key={index}
+            style={[styles.defaultBubble, { backgroundColor: color }]}
+          />
+        ))}
+      </View>
+      <View style={styles.bubbleContainer}>
+        {currentRecommendation && (
+          <Animated.View style={[styles.bubble, animatedStyle]}>
+            <View style={styles.bubbleContent}>
               <Image
-                source={{ uri: recommendation.album.images[0].url }}
+                source={{ uri: currentRecommendation.album.images[0].url }}
                 style={styles.albumArt}
               />
-              <Text style={styles.albumName}>{recommendation.album.name}</Text>
-            </TouchableOpacity>
+              <Text style={styles.albumName} numberOfLines={2}>
+                {currentRecommendation.name}
+              </Text>
+            </View>
           </Animated.View>
-        ))}
+        )}
       </View>
     </SafeAreaView>
   );
@@ -187,6 +186,27 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: height,
+  },
+  defaultBubblesContainer: {
+    flexDirection: 'row', // Arrange bubbles in a row
+    justifyContent: 'space-around', // Space them evenly
+    width: '100%', // Take full width to spread bubbles across
+    position: 'absolute', // Positioning relative to the parent
+    top: 10, // Slightly lower from the top edge
+  },
+  defaultBubblesContainer2: {
+    flexDirection: 'row', // Arrange bubbles in a row
+    justifyContent: 'space-around', // Space them evenly
+    width: '100%', // Take full width to spread bubbles across
+    position: 'absolute', // Positioning relative to the parent
+    top: -20, // Slightly lower from the top edge
+  },
+  defaultBubble: {
+    width: bubbleSize / 2, // Smaller size for default bubbles
+    height: bubbleSize / 2,
+    borderRadius: bubbleSize, // Ensure they're rounded
+    borderWidth: 2,
+    borderColor: "white",
   },
   bubbleContainer: {
     flex: 1,
