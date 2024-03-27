@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   TouchableOpacity,
@@ -16,6 +16,7 @@ import Animated, {
   withSequence,
   withDelay,
   interpolateColor,
+  runOnJS,
 } from "react-native-reanimated";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -31,14 +32,15 @@ type Recommendation = {
 
 const { width, height } = Dimensions.get("window");
 const bubbleSize = 200;
-const animationDuration = 2000;
-const bubbleDelay = 500;
+const animationDuration = 4000; // Slowed down animation duration
+const bubbleDelay = 1000; // Increased bubble delay
 const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
 
 const HomeScreen = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [playedSongs, setPlayedSongs] = useState<string[]>([]);
-  const animatedValues = useSharedValue(-bubbleSize);
+  const animatedValues = useSharedValue(0); // Initialize with 0
+  const isPaused = useRef(false);
 
   const fetchRecommendations = useCallback(async () => {
     try {
@@ -82,13 +84,14 @@ const HomeScreen = () => {
   }, [fetchRecommendations]);
 
   useEffect(() => {
-    if (recommendations.length < 4) {
+    if (!isPaused.current && recommendations.length < 4) {
       fetchRecommendations();
     }
   }, [recommendations, fetchRecommendations]);
 
   const playPreview = async (previewUrl: string) => {
     try {
+      isPaused.current = true;
       const { sound } = await Audio.Sound.createAsync({ uri: previewUrl });
       await sound.playAsync();
       setPlayedSongs((prevPlayedSongs) => [...prevPlayedSongs, previewUrl]);
@@ -103,7 +106,7 @@ const HomeScreen = () => {
     const randomColorEnd = colors[Math.floor(Math.random() * colors.length)];
     const bubbleColor = interpolateColor(
       animatedValues.value,
-      [-bubbleSize, height + bubbleSize],
+      [0, height + bubbleSize],
       [randomColorStart, randomColorEnd]
     );
     return {
@@ -112,18 +115,30 @@ const HomeScreen = () => {
         {
           translateY: withSequence(
             withDelay(
-              bubbleDelay * animatedValues.value,
+              isPaused.current ? 0 : bubbleDelay,
               withTiming(height + bubbleSize, {
-                duration: animationDuration,
+                duration: isPaused.current ? 0 : animationDuration,
                 easing: Easing.linear,
               })
             ),
-            withTiming(-bubbleSize, { duration: 0 })
+            withTiming(0, { duration: 0 }) // Move bubble back to top
           ),
         },
       ],
     };
   }, []);
+
+  useEffect(() => {
+    if (recommendations.length > 0) {
+      animatedValues.value = withDelay(
+        isPaused.current ? 0 : bubbleDelay,
+        withTiming(height + bubbleSize, {
+          duration: animationDuration,
+          easing: Easing.linear,
+        })
+      );
+    }
+  }, [recommendations, animatedValues]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,26 +148,30 @@ const HomeScreen = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      {recommendations.map((recommendation, index) => (
-        <Animated.View
-          key={index}
-          style={[styles.bubble, animatedStyle]}
-          onLayout={() => {
-            animatedValues.value = animatedValues.value + 1;
-          }}
-        >
-          <TouchableOpacity
-            style={styles.bubbleContent}
-            onPress={() => playPreview(recommendation.preview_url)}
+      <View style={styles.bubbleContainer}>
+        {recommendations.map((recommendation, index) => (
+          <Animated.View
+            key={index}
+            style={[styles.bubble, animatedStyle]}
+            onLayout={() => {
+              if (!isPaused.current) {
+                animatedValues.value = 0; // Start animation for new bubble
+              }
+            }}
           >
-            <Image
-              source={{ uri: recommendation.album.images[0].url }}
-              style={styles.albumArt}
-            />
-            <Text style={styles.albumName}>{recommendation.album.name}</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      ))}
+            <TouchableOpacity
+              style={styles.bubbleContent}
+              onPress={() => playPreview(recommendation.preview_url)}
+            >
+              <Image
+                source={{ uri: recommendation.album.images[0].url }}
+                style={styles.albumArt}
+              />
+              <Text style={styles.albumName}>{recommendation.album.name}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ))}
+      </View>
     </SafeAreaView>
   );
 };
@@ -168,6 +187,11 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: height,
+  },
+  bubbleContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   bubble: {
     width: bubbleSize,
