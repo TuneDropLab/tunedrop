@@ -1,46 +1,53 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { Dimensions } from 'react-native';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withSequence,
+    withTiming,
+    withDelay,
+} from 'react-native-reanimated';
 
-const Circle = ({ duration, size, color, left }: any) => {
-    const position = useRef(new Animated.Value(0)).current;
+const { width, height } = Dimensions.get('window');
 
+const Circle = ({ size, color, duration, onPress }: any) => {
+    const circleY = useSharedValue(-10);
+    const circleX = useSharedValue(3); // Start at the center
 
-    useEffect(() => {
-        Animated.timing(position, {
-            toValue: 1,
-            duration,
-            useNativeDriver: true,
-        }).start();
-    }, []);
+    const animatedStyle = useAnimatedStyle(() => ({
+        backgroundColor: color,
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        position: "absolute",
+        left: circleX.value,
+        top: circleY.value,
+    }));
+
+    const [animationStarted, setAnimationStarted] = useState(false);
+
+    const fallAnimation = () => {
+        if (!animationStarted) {
+            setAnimationStarted(true);
+            circleY.value = withSequence(
+                withDelay(
+                    Math.random() * 2000,
+                    withTiming(height, { duration: duration * 2 })
+                ), // Slow fall animation
+            );
+        }
+    };
+
+    fallAnimation();
 
     return (
         <Animated.View
-            style={[
-                styles.circle,
-                {
-                    backgroundColor: color,
-                    width: size,
-                    height: size,
-                    left,
-                    transform: [
-                        {
-                            translateY: position.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [-size, 1000],
-                            }),
-                        },
-                    ],
-                },
-            ]}
+            style={animatedStyle}
+            onStartShouldSetResponder={() => true}
+            onResponderGrant={onPress}
         />
     );
 };
-
-const styles = StyleSheet.create({
-    circle: {
-        position: 'absolute',
-        borderRadius: 50,
-    },
-});
 
 export default Circle;

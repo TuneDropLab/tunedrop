@@ -8,9 +8,11 @@ import SignInScreen from './src/screens/SignInScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import 'react-native-gesture-handler';
 import LandingScreen from './src/screens/LandingScreen';
-import { useAuth } from './src/context/AuthContext';
+
 import * as Sentry from "@sentry/react-native";
 import TutorialScreen from './src/screens/TutorialScreen';
+import { useEffect, useState } from 'react';
+import { useAuthStore } from './src/context/AuthContext';
 
 
 Sentry.init({
@@ -25,16 +27,20 @@ Sentry.init({
 const Stack = createStackNavigator();
 
 function App() {
-  // const isSignedIn = false; // Add your logic to check if the user is signed in
-  const { isSignedIn, } = useAuth();
+  const istest = false; // Add your logic to check if the user is signed in
+  const { isSignedIn, signIn, signOut } = useAuthStore();
+  const initialRouteName = isSignedIn ? 'HomeScreen' : 'SignInScreen';
+
 
   return (
+
+    // <AuthProvider>
     <NavigationContainer>
-      <Stack.Navigator initialRouteName={isSignedIn ? "HomeScreen" : Platform.OS === 'web' ? "LandingScreen" : "OnboardingScreen"}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
         <Stack.Screen
           name="HomeScreen"
           component={HomeScreen}
-          options={{ title: 'Home', headerShown: false }}
+          options={{ title: 'Home' }}
         />
         <Stack.Screen
           name="OnboardingScreen"
@@ -47,12 +53,12 @@ function App() {
         <Stack.Screen
           name="SignInScreen"
           component={SignInScreen}
-          options={{ title: 'Sign In', headerShown: false }}
+          options={{ title: 'Sign In' }}
         />
         <Stack.Screen
           name="TutorialScreen"
           component={TutorialScreen}
-          options={{ title: 'Tutorial', headerShown: false }}
+          options={{ title: 'Tutorial' }}
         />
         {Platform.OS === 'web' && (
           <Stack.Screen
@@ -63,6 +69,8 @@ function App() {
         )}
       </Stack.Navigator>
     </NavigationContainer>
+    // </AuthProvider>
+
   );
 }
 
@@ -74,5 +82,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+
 
 export default Sentry.wrap(App);
