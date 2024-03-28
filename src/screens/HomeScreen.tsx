@@ -24,7 +24,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ParamListBase, useNavigation } from "@react-navigation/native";
 
 const { width, height } = Dimensions.get("window");
-const bubbleSize = 230;
+const bubbleSize = 200;
 const animationDuration = 5000;
 const colors = ["#8ac5f4", "#b1d8f6", "#d2eaf9", "#f6f5ee", "#fafafa"];
 
@@ -75,7 +75,9 @@ const HomeScreen = () => {
           Image.prefetch(rec.album.images[0].url)
         );
         await Promise.all(imagePreloadPromises);
+        console.log("Fetched recommendations:", data);
         setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
+
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
@@ -97,20 +99,23 @@ const HomeScreen = () => {
     checkAndFetchRecommendations();
   }, [checkAndFetchRecommendations]);
 
-  const playPreview = async (previewUrl: string) => {
-    // Stop the currently playing sound (if any)
+  const preloadSound = async (previewUrl: string) => {
     if (sound) {
-      await sound.unloadAsync();
-      setSound(null);
+      await sound.unloadAsync(); // Ensure the previous sound is unloaded
     }
-
     const { sound: newSound } = await Audio.Sound.createAsync(
       { uri: previewUrl },
-      { shouldPlay: true }
+      { shouldPlay: false } // Load the sound without playing
     );
     setSound(newSound);
-    await newSound.playAsync();
   };
+  
+  const playCurrentSound = async () => {
+    if (sound) {
+      await sound.playAsync(); // Play the preloaded sound
+    }
+  };
+  
 
   useEffect(() => {
     return sound
@@ -144,10 +149,17 @@ const HomeScreen = () => {
       const nextQueue = [...currentQueue];
       const nextRecommendation = nextQueue.shift();
       setCurrentRecommendation(nextRecommendation || null);
-      setIsImageLoading(true); // Reset image loading state for new recommendation
+      setIsImageLoading(true); // Indicate that a new image is loading
+      
+      if (nextQueue.length > 0) {
+        preloadSound(nextQueue[0].preview_url); // Preload the sound for the next recommendation
+      }
+      
       return nextQueue;
     });
   }, []);
+  
+  
 
   const startNextAnimation = useCallback(() => {
     if (recommendationsQueue.length > 0 && !isPaused) {
@@ -260,7 +272,7 @@ const HomeScreen = () => {
                 cancelAnimation(animationValue);
                 setIsPaused(true);
                 console.log(currentRecommendation.preview_url);
-                playPreview(currentRecommendation.preview_url); // Play the sound on press
+                playCurrentSound(); // Play the sound on press
               }}
               onPressOut={() => {
                 console.log("Long press released!");
