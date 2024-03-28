@@ -26,7 +26,7 @@ import { ParamListBase, useNavigation } from "@react-navigation/native";
 const { width, height } = Dimensions.get("window");
 const bubbleSize = 230;
 const animationDuration = 5000;
-const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
+const colors = ["#8ac5f4", "#b1d8f6", "#d2eaf9", "#f6f5ee", "#fafafa"];
 
 type Recommendation = {
   name: string;
@@ -47,6 +47,7 @@ const HomeScreen = () => {
   const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
   const [isPaused, setIsPaused] = useState(false);
   const animationValue = useSharedValue(-bubbleSize);
+  const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -90,12 +91,37 @@ const HomeScreen = () => {
   }, [checkAndFetchRecommendations]);
 
   const playPreview = async (previewUrl: string) => {
-    try {
-      // isPaused.current = true;
-      const { sound } = await Audio.Sound.createAsync({ uri: previewUrl });
-      await sound.playAsync();
-    } catch (error) {
-      console.error("Error playing audio:", error);
+    // Stop the currently playing sound (if any)
+    if (sound) {
+      await sound.unloadAsync();
+      setSound(null);
+    }
+
+    const { sound: newSound } = await Audio.Sound.createAsync(
+      { uri: previewUrl },
+      { shouldPlay: true }
+    );
+    setSound(newSound);
+    await newSound.playAsync();
+  };
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
+
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+    });
+  }, []);
+
+  const stopSound = async () => {
+    if (sound) {
+      await sound.stopAsync();
     }
   };
 
@@ -170,13 +196,22 @@ const HomeScreen = () => {
     isPaused,
   ]);
 
+  function getContrastYIQ(hexcolor: string) {
+    hexcolor = hexcolor.replace("#", "");
+    var r = parseInt(hexcolor.substr(0, 2), 16);
+    var g = parseInt(hexcolor.substr(2, 2), 16);
+    var b = parseInt(hexcolor.substr(4, 2), 16);
+    var yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 128 ? "black" : "white";
+  }
+
   let animation: any;
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
 
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={["#ff00cc", "#333399", "#ff00cc"]}
+        colors={["#131624", "#333399", "#444655"]}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -216,6 +251,8 @@ const HomeScreen = () => {
               console.log("Bubble long-pressed!");
               cancelAnimation(animationValue);
               setIsPaused(true);
+              console.log(currentRecommendation.preview_url);
+              playPreview(currentRecommendation.preview_url); // Play the sound on press
             }}
             onPressOut={() => {
               console.log("Long press released!");
@@ -226,6 +263,7 @@ const HomeScreen = () => {
                   animateBubble();
                 }
               }, 100);
+              stopSound(); // Stop the sound on release
             }}
           >
             <Animated.View style={[styles.bubble, animatedStyle]}>
@@ -234,7 +272,13 @@ const HomeScreen = () => {
                   source={{ uri: currentRecommendation.album.images[0].url }}
                   style={styles.albumArt}
                 />
-                <Text style={styles.albumName} numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.albumName,
+                    { color: getContrastYIQ(bubbleColor) },
+                  ]}
+                  numberOfLines={2}
+                >
                   {currentRecommendation.name}
                 </Text>
               </View>
@@ -318,10 +362,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     maxWidth: 150,
-    color: "white",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   profileButtonContainer: {
     position: "absolute",
