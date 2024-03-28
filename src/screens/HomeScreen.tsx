@@ -15,6 +15,7 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   runOnJS,
+  cancelAnimation,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
@@ -31,17 +32,20 @@ type Recommendation = {
   name: string;
   preview_url: string;
   album: {
-    images: { url: string; }[];
+    images: { url: string }[];
     name: string;
   };
 };
 
 const HomeScreen = () => {
-  const [recommendationsQueue, setRecommendationsQueue] = useState<Recommendation[]>([]);
-  const [currentRecommendation, setCurrentRecommendation] = useState<Recommendation | null>(null);
+  const [recommendationsQueue, setRecommendationsQueue] = useState<
+    Recommendation[]
+  >([]);
+  const [currentRecommendation, setCurrentRecommendation] =
+    useState<Recommendation | null>(null);
   const [bubbleColor, setBubbleColor] = useState<string>("");
   const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
-  // const isPaused = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
   const animationValue = useSharedValue(-bubbleSize);
 
   const fetchRecommendations = useCallback(async () => {
@@ -112,40 +116,62 @@ const HomeScreen = () => {
   }, []);
 
   const startNextAnimation = useCallback(() => {
-    if (recommendationsQueue.length > 0) {
+    if (recommendationsQueue.length > 0 && !isPaused) {
+      // Process next recommendation and restart animation
       processNextRecommendation();
       setBubbleColor(colors[Math.floor(Math.random() * colors.length)]);
-      animationValue.value = -bubbleSize;
+      animationValue.value = -bubbleSize; // Reset animation start position
       animateBubble();
-    } else {
-      checkAndFetchRecommendations();
     }
-  }, [recommendationsQueue, processNextRecommendation, checkAndFetchRecommendations]);
-
-  const [isPaused, setIsPaused] = useState(false);
+  }, [recommendationsQueue, processNextRecommendation, isPaused]);
 
   const animateBubble = useCallback(() => {
-    animation = animationValue.value = withTiming(height, {
-      duration: animationDuration,
-      easing: Easing.linear,
-    }, () => {
-      if (!isPaused) {
-        runOnJS(startNextAnimation)();
+    // Calculate remaining distance and adjust duration based on current position if paused
+    const startValue =
+      animationValue.value < 0 ? -bubbleSize : animationValue.value;
+    const remainingDistance = height - startValue;
+    const adjustedDuration = isPaused
+      ? (remainingDistance / height) * animationDuration
+      : animationDuration;
+
+    animationValue.value = withTiming(
+      height,
+      {
+        duration: adjustedDuration,
+        easing: Easing.linear,
+      },
+      (isFinished) => {
+        if (isFinished && !isPaused) {
+          runOnJS(startNextAnimation)();
+        }
       }
-    });
-    return animation;
-  }, [startNextAnimation, isPaused]);
+    );
+  }, [isPaused, startNextAnimation]);
 
   useEffect(() => {
-    if (currentRecommendation === null && recommendationsQueue.length > 0) {
+    // Start animation only if there's a current recommendation, and it's not paused.
+    if (currentRecommendation !== null && !isPaused) {
+      animateBubble();
+    }
+  }, [currentRecommendation, animateBubble, isPaused]);
+
+  useEffect(() => {
+    if (
+      currentRecommendation === null &&
+      recommendationsQueue.length > 0 &&
+      !isPaused
+    ) {
       startNextAnimation();
     }
-  }, [currentRecommendation, recommendationsQueue, startNextAnimation]);
-
+  }, [
+    currentRecommendation,
+    recommendationsQueue,
+    startNextAnimation,
+    isPaused,
+  ]);
 
   let animation: any;
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
-
 
   return (
     <SafeAreaView style={styles.container}>
@@ -156,14 +182,24 @@ const HomeScreen = () => {
         end={{ x: 1, y: 1 }}
       />
       <View style={styles.profileButtonContainer}>
-        <TouchableOpacity style={styles.profileButton} onPress={() => {
-          navigation.navigate("ProfileScreen");
-        }}>
+        <TouchableOpacity
+          style={styles.profileButton}
+          onPress={() => {
+            navigation.navigate("ProfileScreen");
+          }}
+        >
           <Text style={styles.profileButtonText}>Profile</Text>
         </TouchableOpacity>
       </View>
       {/* Default bubbles at the top */}
-
+      <View style={styles.defaultBubblesContainer}>
+        {colors.map((color, index) => (
+          <View
+            key={index}
+            style={[styles.defaultBubble, { backgroundColor: color }]}
+          />
+        ))}
+      </View>
 
       <View style={styles.defaultBubblesContainer2}>
         {colors.reverse().map((color, index) => (
@@ -175,20 +211,23 @@ const HomeScreen = () => {
       </View>
       <View style={styles.bubbleContainer}>
         {currentRecommendation && (
-
           <TouchableOpacity
-            onLongPress={() => {
-              console.log('Bubble long-pressed!');
+            onPressIn={() => {
+              console.log("Bubble long-pressed!");
+              cancelAnimation(animationValue);
               setIsPaused(true);
-              // animation.stop();
             }}
             onPressOut={() => {
-              console.log('Long press released!');
+              console.log("Long press released!");
               setIsPaused(false);
-              // animateBubble().start();
+              // Need a slight delay before resuming to ensure `isPaused` state is updated
+              setTimeout(() => {
+                if (!isPaused) {
+                  animateBubble();
+                }
+              }, 100);
             }}
           >
-
             <Animated.View style={[styles.bubble, animatedStyle]}>
               <View style={styles.bubbleContent}>
                 <Image
@@ -220,17 +259,17 @@ const styles = StyleSheet.create({
     height: height,
   },
   defaultBubblesContainer: {
-    flexDirection: 'row', // Arrange bubbles in a row
-    justifyContent: 'space-around', // Space them evenly
-    width: '100%', // Take full width to spread bubbles across
-    position: 'absolute', // Positioning relative to the parent
+    flexDirection: "row", // Arrange bubbles in a row
+    justifyContent: "space-around", // Space them evenly
+    width: "100%", // Take full width to spread bubbles across
+    position: "absolute", // Positioning relative to the parent
     top: 10, // Slightly lower from the top edge
   },
   defaultBubblesContainer2: {
-    flexDirection: 'row', // Arrange bubbles in a row
-    justifyContent: 'space-around', // Space them evenly
-    width: '100%', // Take full width to spread bubbles across
-    position: 'absolute', // Positioning relative to the parent
+    flexDirection: "row", // Arrange bubbles in a row
+    justifyContent: "space-around", // Space them evenly
+    width: "100%", // Take full width to spread bubbles across
+    position: "absolute", // Positioning relative to the parent
     top: -20, // Slightly lower from the top edge
   },
   defaultBubble: {
@@ -285,18 +324,18 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
   profileButtonContainer: {
-    position: 'absolute',
+    position: "absolute",
     zIndex: 30,
     top: 55,
     right: 30,
   },
   profileButton: {
-    backgroundColor: '#888',
+    backgroundColor: "#888",
     padding: 10,
     borderRadius: 5,
   },
   profileButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
 });
 
