@@ -13,6 +13,7 @@ import * as Sentry from "@sentry/react-native";
 import TutorialScreen from './src/screens/TutorialScreen';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from './src/context/AuthContext';
+import ProfileScreen from './src/screens/ProfileScreen';
 
 
 Sentry.init({
@@ -59,6 +60,11 @@ function App() {
           name="TutorialScreen"
           component={TutorialScreen}
           options={{ title: 'Tutorial' }}
+        />
+        <Stack.Screen
+          name="ProfileScreen"
+          component={ProfileScreen}
+          options={{ title: 'Profile' }}
         />
         {Platform.OS === 'web' && (
           <Stack.Screen

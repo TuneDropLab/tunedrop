@@ -6,6 +6,8 @@ import {
   Image,
   StyleSheet,
   SafeAreaView,
+  TouchableOpacity,
+  Pressable,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -17,17 +19,19 @@ import Animated, {
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { ParamListBase, useNavigation } from "@react-navigation/native";
 
 const { width, height } = Dimensions.get("window");
 const bubbleSize = 230;
-const animationDuration = 4000;
+const animationDuration = 5000;
 const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
 
 type Recommendation = {
-    name: string;
+  name: string;
   preview_url: string;
   album: {
-    images: { url: string }[];
+    images: { url: string; }[];
     name: string;
   };
 };
@@ -37,7 +41,7 @@ const HomeScreen = () => {
   const [currentRecommendation, setCurrentRecommendation] = useState<Recommendation | null>(null);
   const [bubbleColor, setBubbleColor] = useState<string>("");
   const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
-  const isPaused = useRef(false);
+  // const isPaused = useRef(false);
   const animationValue = useSharedValue(-bubbleSize);
 
   const fetchRecommendations = useCallback(async () => {
@@ -72,7 +76,7 @@ const HomeScreen = () => {
   }, [isFetching]); // Add isFetching to the dependency array
 
   const checkAndFetchRecommendations = useCallback(() => {
-    if (!isPaused.current && recommendationsQueue.length < 4 && !isFetching) {
+    if (recommendationsQueue.length < 4 && !isFetching) {
       fetchRecommendations();
     }
   }, [recommendationsQueue.length, isFetching, fetchRecommendations]);
@@ -83,7 +87,7 @@ const HomeScreen = () => {
 
   const playPreview = async (previewUrl: string) => {
     try {
-      isPaused.current = true;
+      // isPaused.current = true;
       const { sound } = await Audio.Sound.createAsync({ uri: previewUrl });
       await sound.playAsync();
     } catch (error) {
@@ -118,18 +122,30 @@ const HomeScreen = () => {
     }
   }, [recommendationsQueue, processNextRecommendation, checkAndFetchRecommendations]);
 
+  const [isPaused, setIsPaused] = useState(false);
+
   const animateBubble = useCallback(() => {
-    animationValue.value = withTiming(height, {
+    animation = animationValue.value = withTiming(height, {
       duration: animationDuration,
       easing: Easing.linear,
-    }, () => runOnJS(startNextAnimation)());
-  }, [startNextAnimation]);
+    }, () => {
+      if (!isPaused) {
+        runOnJS(startNextAnimation)();
+      }
+    });
+    return animation;
+  }, [startNextAnimation, isPaused]);
 
   useEffect(() => {
     if (currentRecommendation === null && recommendationsQueue.length > 0) {
       startNextAnimation();
     }
   }, [currentRecommendation, recommendationsQueue, startNextAnimation]);
+
+
+  let animation: any;
+  const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -139,15 +155,16 @@ const HomeScreen = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      {/* Default bubbles at the top */}
-      <View style={styles.defaultBubblesContainer}>
-        {colors.map((color, index) => (
-          <View
-            key={index}
-            style={[styles.defaultBubble, { backgroundColor: color }]}
-          />
-        ))}
+      <View style={styles.profileButtonContainer}>
+        <TouchableOpacity style={styles.profileButton} onPress={() => {
+          navigation.navigate("ProfileScreen");
+        }}>
+          <Text style={styles.profileButtonText}>Profile</Text>
+        </TouchableOpacity>
       </View>
+      {/* Default bubbles at the top */}
+
+
       <View style={styles.defaultBubblesContainer2}>
         {colors.reverse().map((color, index) => (
           <View
@@ -158,17 +175,32 @@ const HomeScreen = () => {
       </View>
       <View style={styles.bubbleContainer}>
         {currentRecommendation && (
-          <Animated.View style={[styles.bubble, animatedStyle]}>
-            <View style={styles.bubbleContent}>
-              <Image
-                source={{ uri: currentRecommendation.album.images[0].url }}
-                style={styles.albumArt}
-              />
-              <Text style={styles.albumName} numberOfLines={2}>
-                {currentRecommendation.name}
-              </Text>
-            </View>
-          </Animated.View>
+
+          <TouchableOpacity
+            onLongPress={() => {
+              console.log('Bubble long-pressed!');
+              setIsPaused(true);
+              // animation.stop();
+            }}
+            onPressOut={() => {
+              console.log('Long press released!');
+              setIsPaused(false);
+              // animateBubble().start();
+            }}
+          >
+
+            <Animated.View style={[styles.bubble, animatedStyle]}>
+              <View style={styles.bubbleContent}>
+                <Image
+                  source={{ uri: currentRecommendation.album.images[0].url }}
+                  style={styles.albumArt}
+                />
+                <Text style={styles.albumName} numberOfLines={2}>
+                  {currentRecommendation.name}
+                </Text>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
         )}
       </View>
     </SafeAreaView>
@@ -217,7 +249,7 @@ const styles = StyleSheet.create({
     width: bubbleSize,
     height: bubbleSize,
     borderRadius: bubbleSize / 2,
-    position: "absolute",
+    // position: "absolute",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -251,6 +283,20 @@ const styles = StyleSheet.create({
     textShadowColor: "rgba(0, 0, 0, 0.5)",
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
+  },
+  profileButtonContainer: {
+    position: 'absolute',
+    zIndex: 30,
+    top: 55,
+    right: 30,
+  },
+  profileButton: {
+    backgroundColor: '#888',
+    padding: 10,
+    borderRadius: 5,
+  },
+  profileButtonText: {
+    color: '#fff',
   },
 });
 
