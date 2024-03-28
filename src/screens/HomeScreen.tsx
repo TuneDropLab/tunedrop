@@ -1,81 +1,60 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
-  TouchableOpacity,
   Text,
   Dimensions,
   Image,
   StyleSheet,
   SafeAreaView,
-} from "react-native";
-import Animated, {
-  useSharedValue,
-  withTiming,
-  useAnimatedStyle,
-  Easing,
-  withSequence,
-  withDelay,
-  interpolateColor,
-  runOnJS,
-} from "react-native-reanimated";
-import { Audio } from "expo-av";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
+} from 'react-native';
+import { Audio } from 'expo-av';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import Circle from '../components/MusicBubble';
+
 
 type Recommendation = {
   preview_url: string;
   album: {
-    images: { url: string }[];
+    images: { url: string; }[];
     name: string;
   };
 };
 
-const { width, height } = Dimensions.get("window");
-const bubbleSize = 200;
-const animationDuration = 4000; // Slowed down animation duration
-const bubbleDelay = 1000; // Increased bubble delay
-const colors = ["#d5523c", "#e68a02", "#fdb800", "#8A2BE2", "#8ea471"];
+const { height } = Dimensions.get('window');
+const colors = ['#d5523c', '#e68a02', '#fdb800', '#8A2BE2', '#8ea471'];
 
 const HomeScreen = () => {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [playedSongs, setPlayedSongs] = useState<string[]>([]);
-  const animatedValues = useSharedValue(0); // Initialize with 0
-  const isPaused = useRef(false);
 
   const fetchRecommendations = useCallback(async () => {
     try {
-      const jwtToken = await AsyncStorage.getItem("@jwt");
-      console.log("JWT", jwtToken);
+      const jwtToken = await AsyncStorage.getItem('@jwt');
+      console.log('JWT', jwtToken);
       if (!jwtToken) {
-        throw new Error("Access token not found");
+        throw new Error('Access token not found');
       }
 
-      const response = await fetch(
-        "http://localhost:3000/spotify/recommendations",
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${jwtToken}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch('http://localhost:3000/spotify/recommendations', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
       if (response.ok) {
         const data = await response.json();
-        console.log("Recommendations:", data);
+        console.log('Recommendations:', data);
         const newRecommendations = data.filter(
-          (recommendation: any) =>
-            !playedSongs.includes(recommendation.preview_url)
+          (recommendation: any) => !playedSongs.includes(recommendation.preview_url)
         );
-        setRecommendations((prevRecommendations) => [
-          ...prevRecommendations,
-          ...newRecommendations,
-        ]);
+        setRecommendations((prevRecommendations) => [...prevRecommendations, ...newRecommendations]);
       } else {
-        console.error("Failed to fetch recommendations:", response.statusText);
+        console.error('Failed to fetch recommendations:', response.statusText);
       }
     } catch (error) {
-      console.error("Error fetching recommendations:", error);
+      console.error('Error fetching recommendations:', error);
     }
   }, [playedSongs]);
 
@@ -84,94 +63,39 @@ const HomeScreen = () => {
   }, [fetchRecommendations]);
 
   useEffect(() => {
-    if (!isPaused.current && recommendations.length < 4) {
+    if (recommendations.length < 4) {
       fetchRecommendations();
     }
   }, [recommendations, fetchRecommendations]);
 
   const playPreview = async (previewUrl: string) => {
     try {
-      isPaused.current = true;
       const { sound } = await Audio.Sound.createAsync({ uri: previewUrl });
       await sound.playAsync();
       setPlayedSongs((prevPlayedSongs) => [...prevPlayedSongs, previewUrl]);
     } catch (error) {
-      console.error("Error playing audio:", error);
+      console.error('Error playing audio:', error);
     }
   };
 
-  const animatedStyle = useAnimatedStyle(() => {
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    const randomColorStart = colors[Math.floor(Math.random() * colors.length)];
-    const randomColorEnd = colors[Math.floor(Math.random() * colors.length)];
-    const bubbleColor = interpolateColor(
-      animatedValues.value,
-      [0, height + bubbleSize],
-      [randomColorStart, randomColorEnd]
-    );
-    return {
-      backgroundColor: bubbleColor,
-      transform: [
-        {
-          translateY: withSequence(
-            withDelay(
-              isPaused.current ? 0 : bubbleDelay,
-              withTiming(height + bubbleSize, {
-                duration: isPaused.current ? 0 : animationDuration,
-                easing: Easing.linear,
-              })
-            ),
-            withTiming(0, { duration: 0 }) // Move bubble back to top
-          ),
-        },
-      ],
-    };
-  }, []);
 
-  useEffect(() => {
-    if (recommendations.length > 0) {
-      animatedValues.value = withDelay(
-        isPaused.current ? 0 : bubbleDelay,
-        withTiming(height + bubbleSize, {
-          duration: animationDuration,
-          easing: Easing.linear,
-        })
-      );
-    }
-  }, [recommendations, animatedValues]);
+  
 
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={["#ff00cc", "#333399", "#ff00cc"]}
+        colors={['#ff00cc', '#333399', '#ff00cc']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <View style={styles.bubbleContainer}>
-        {recommendations.map((recommendation, index) => (
-          <Animated.View
-            key={index}
-            style={[styles.bubble, animatedStyle]}
-            onLayout={() => {
-              if (!isPaused.current) {
-                animatedValues.value = 0; // Start animation for new bubble
-              }
-            }}
-          >
-            <TouchableOpacity
-              style={styles.bubbleContent}
-              onPress={() => playPreview(recommendation.preview_url)}
-            >
-              <Image
-                source={{ uri: recommendation.album.images[0].url }}
-                style={styles.albumArt}
-              />
-              <Text style={styles.albumName}>{recommendation.album.name}</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </View>
+      {recommendations.map((recommendation, index) => (
+        <Circle
+          key={index}
+          recommendation={recommendation}
+          playPreview={playPreview}
+        />
+      ))}
     </SafeAreaView>
   );
 };
@@ -179,58 +103,14 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
   },
   background: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
     height: height,
-  },
-  bubbleContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bubble: {
-    width: bubbleSize,
-    height: bubbleSize,
-    borderRadius: bubbleSize / 2,
-    position: "absolute",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    shadowOpacity: 0.5,
-    shadowRadius: 5,
-    elevation: 10,
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  bubbleContent: {
-    padding: 8,
-    alignItems: "center",
-  },
-  albumArt: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "white",
-  },
-  albumName: {
-    marginTop: 8,
-    fontWeight: "bold",
-    textAlign: "center",
-    maxWidth: 150,
-    color: "white",
-    textShadowColor: "rgba(0, 0, 0, 0.5)",
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 });
 
