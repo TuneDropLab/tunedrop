@@ -69,7 +69,8 @@ const HomeScreen = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
+        console.log(data.body.tracks)
+        setRecommendationsQueue((prevQueue) => [...prevQueue, ...data.body.tracks]);
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
