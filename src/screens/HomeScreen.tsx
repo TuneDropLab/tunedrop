@@ -253,32 +253,33 @@ const HomeScreen = () => {
       </View>
       <View style={styles.bubbleContainer}>
         {currentRecommendation && (
-          <TouchableOpacity
-            onPressIn={() => {
-              console.log("Bubble long-pressed!");
-              cancelAnimation(animationValue);
-              setIsPaused(true);
-              console.log(currentRecommendation.preview_url);
-              playPreview(currentRecommendation.preview_url); // Play the sound on press
-            }}
-            onPressOut={() => {
-              console.log("Long press released!");
-              setIsPaused(false);
-              // Need a slight delay before resuming to ensure `isPaused` state is updated
-              setTimeout(() => {
-                if (!isPaused) {
-                  animateBubble();
-                }
-              }, 100);
-              stopSound(); // Stop the sound on release
-            }}
-          >
-            <Animated.View style={[styles.bubble, animatedStyle]}>
+          <Animated.View style={[styles.bubble, animatedStyle]}>
+            <TouchableOpacity
+              onPressIn={() => {
+                console.log("Bubble long-pressed!");
+                cancelAnimation(animationValue);
+                setIsPaused(true);
+                console.log(currentRecommendation.preview_url);
+                playPreview(currentRecommendation.preview_url); // Play the sound on press
+              }}
+              onPressOut={() => {
+                console.log("Long press released!");
+                setIsPaused(false);
+                // Need a slight delay before resuming to ensure `isPaused` state is updated
+                setTimeout(() => {
+                  if (!isPaused) {
+                    animateBubble();
+                  }
+                }, 100);
+                stopSound(); // Stop the sound on release
+              }}
+              style={styles.bubble}
+            >
               <View style={styles.bubbleContent}>
                 <Image
                   source={{ uri: currentRecommendation.album.images[0].url }}
                   style={styles.albumArt}
-                  onLoad={() => setIsImageLoading(false)} // Image has loaded 
+                  onLoad={() => setIsImageLoading(false)} // Image has loaded
                 />
 
                 <Text
@@ -291,8 +292,8 @@ const HomeScreen = () => {
                   {currentRecommendation.name}
                 </Text>
               </View>
-            </Animated.View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </Animated.View>
         )}
       </View>
     </SafeAreaView>
