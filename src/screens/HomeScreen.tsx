@@ -48,6 +48,7 @@ const HomeScreen = () => {
   const [isPaused, setIsPaused] = useState(false);
   const animationValue = useSharedValue(-bubbleSize);
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
+  const [isImageLoading, setIsImageLoading] = useState(true);
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -69,8 +70,12 @@ const HomeScreen = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log(data.body.tracks)
-        setRecommendationsQueue((prevQueue) => [...prevQueue, ...data.body.tracks]);
+        // Preload album images
+        const imagePreloadPromises = data.map((rec: Recommendation) =>
+          Image.prefetch(rec.album.images[0].url)
+        );
+        await Promise.all(imagePreloadPromises);
+        setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
@@ -79,7 +84,8 @@ const HomeScreen = () => {
     } finally {
       setIsFetching(false); // Reset fetching status
     }
-  }, [isFetching]); // Add isFetching to the dependency array
+  }, [isFetching]);
+  // Add isFetching to the dependency array
 
   const checkAndFetchRecommendations = useCallback(() => {
     if (recommendationsQueue.length < 4 && !isFetching) {
@@ -138,6 +144,7 @@ const HomeScreen = () => {
       const nextQueue = [...currentQueue];
       const nextRecommendation = nextQueue.shift();
       setCurrentRecommendation(nextRecommendation || null);
+      setIsImageLoading(true); // Reset image loading state for new recommendation
       return nextQueue;
     });
   }, []);
@@ -176,11 +183,10 @@ const HomeScreen = () => {
   }, [isPaused, startNextAnimation]);
 
   useEffect(() => {
-    // Start animation only if there's a current recommendation, and it's not paused.
-    if (currentRecommendation !== null && !isPaused) {
+    if (currentRecommendation !== null && !isPaused && !isImageLoading) {
       animateBubble();
     }
-  }, [currentRecommendation, animateBubble, isPaused]);
+  }, [currentRecommendation, animateBubble, isPaused, isImageLoading]);
 
   useEffect(() => {
     if (
@@ -272,7 +278,9 @@ const HomeScreen = () => {
                 <Image
                   source={{ uri: currentRecommendation.album.images[0].url }}
                   style={styles.albumArt}
+                  onLoad={() => setIsImageLoading(false)} // Image has loaded 
                 />
+
                 <Text
                   style={[
                     styles.albumName,
