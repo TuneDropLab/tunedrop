@@ -49,7 +49,7 @@ const HomeScreen = () => {
   const animationValue = useSharedValue(-bubbleSize);
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState(""); 
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -90,6 +90,36 @@ const HomeScreen = () => {
   }, [isFetching]);
   // Add isFetching to the dependency array
 
+  const fetchUserProfile = async () => {
+    try {
+      const jwtToken = await AsyncStorage.getItem("@jwt");
+      if (!jwtToken) {
+        console.error("JWT token not found");
+        return;
+      }
+
+      const response = await fetch("http://localhost:3000/user/profile", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${jwtToken}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch user profile");
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Fetched user profile:", data);
+      const profilePhotoUrl = data.profilePictureUrl ? data.profilePictureUrl : "http://www.gravatar.com/avatar/?d=retro&s=32";
+      setProfilePhoto(profilePhotoUrl); // Use default URL if not provided
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
   const checkAndFetchRecommendations = useCallback(() => {
     if (recommendationsQueue.length < 4 && !isFetching) {
       fetchRecommendations();
@@ -99,6 +129,10 @@ const HomeScreen = () => {
   useEffect(() => {
     checkAndFetchRecommendations();
   }, [checkAndFetchRecommendations]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
 
   const preloadSound = async (previewUrl: string) => {
     if (sound) {
@@ -242,13 +276,11 @@ const HomeScreen = () => {
         end={{ x: 1, y: 1 }}
       />
       <View style={styles.profileButtonContainer}>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => {
-            navigation.navigate("ProfileScreen");
-          }}
-        >
-          <Text style={styles.profileButtonText}>Profile</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
+          <Image
+            source={{ uri: profilePhoto }}
+            style={styles.profilePhoto}
+          />
         </TouchableOpacity>
       </View>
       {/* Default bubbles at the top */}
@@ -394,16 +426,16 @@ const styles = StyleSheet.create({
   profileButtonContainer: {
     position: "absolute",
     zIndex: 30,
-    top: 55,
-    right: 30,
+    top: 40,
+    right: 20,
   },
-  profileButton: {
-    backgroundColor: "#888",
-    padding: 10,
-    borderRadius: 5,
-  },
-  profileButtonText: {
-    color: "#fff",
+  profilePhoto: {
+    width: 50,
+    height: 50,
+    borderRadius: 25, // Make it round
+    borderWidth: 2,
+    borderColor: "black",
+    shadowColor: "#000",
   },
 });
 
