@@ -16,6 +16,7 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
   cancelAnimation,
+  withRepeat,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
@@ -49,7 +50,9 @@ const HomeScreen = () => {
   const animationValue = useSharedValue(-bubbleSize);
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const [profilePhoto, setProfilePhoto] = useState(""); 
+  const [profilePhoto, setProfilePhoto] = useState("");
+  const scaleValue = useSharedValue(1);
+  
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -78,7 +81,6 @@ const HomeScreen = () => {
         await Promise.all(imagePreloadPromises);
         console.log("Fetched recommendations:", data);
         setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
-
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
@@ -113,7 +115,9 @@ const HomeScreen = () => {
 
       const data = await response.json();
       console.log("Fetched user profile:", data);
-      const profilePhotoUrl = data.profilePictureUrl ? data.profilePictureUrl : "http://www.gravatar.com/avatar/?d=retro&s=32";
+      const profilePhotoUrl = data.profilePictureUrl
+        ? data.profilePictureUrl
+        : "http://www.gravatar.com/avatar/?d=retro&s=32";
       setProfilePhoto(profilePhotoUrl); // Use default URL if not provided
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -147,13 +151,26 @@ const HomeScreen = () => {
     // setCurrentRecommendation(nextRecommendation);
     setSound(newSound);
   };
-  
+
   const playCurrentSound = async () => {
     if (sound) {
       await sound.playAsync(); // Play the preloaded sound
     }
   };
-  
+
+  const pressInAnimation = () => {
+    // Start the song wave animation
+    scaleValue.value = withRepeat(
+      withTiming(1.1, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+      -1, // Repeat indefinitely
+      true // Reverse the animation on every iteration
+    );
+  };
+
+  const pressOutAnimation = () => {
+    // Stop the song wave animation and reset scale
+    scaleValue.value = withTiming(1, { duration: 200 });
+  };
 
   useEffect(() => {
     return sound
@@ -178,7 +195,10 @@ const HomeScreen = () => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       backgroundColor: bubbleColor, // Use the stable color
-      transform: [{ translateY: animationValue.value }],
+      transform: [
+        { translateY: animationValue.value },
+        { scale: scaleValue.value },
+      ],
     };
   }, [bubbleColor]); // Depend on bubbleColor
 
@@ -191,15 +211,14 @@ const HomeScreen = () => {
       }
       setCurrentRecommendation(nextRecommendation || null);
       setIsImageLoading(true); // Indicate that a new image is loading
-      
+
       if (nextQueue.length > 0) {
         preloadSound(nextRecommendation.preview_url); // Preload the sound for the next recommendation
       }
-      
+
       return nextQueue;
     });
   }, []);
-
 
   const startNextAnimation = useCallback(() => {
     if (recommendationsQueue.length > 0 && !isPaused) {
@@ -277,10 +296,7 @@ const HomeScreen = () => {
       />
       <View style={styles.profileButtonContainer}>
         <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
-          <Image
-            source={{ uri: profilePhoto }}
-            style={styles.profilePhoto}
-          />
+          <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
         </TouchableOpacity>
       </View>
       {/* Default bubbles at the top */}
@@ -309,6 +325,7 @@ const HomeScreen = () => {
                 console.log("Bubble long-pressed!");
                 cancelAnimation(animationValue);
                 setIsPaused(true);
+                pressInAnimation();
                 console.log(currentRecommendation.preview_url);
                 playCurrentSound(); // Play the sound on press
               }}
@@ -316,6 +333,7 @@ const HomeScreen = () => {
                 console.log("Long press released!");
                 setIsPaused(false);
                 // Need a slight delay before resuming to ensure `isPaused` state is updated
+                pressOutAnimation();
                 setTimeout(() => {
                   if (!isPaused) {
                     animateBubble();
