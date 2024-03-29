@@ -49,6 +49,7 @@ const HomeScreen = () => {
   const animationValue = useSharedValue(-bubbleSize);
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
+  const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -77,6 +78,7 @@ const HomeScreen = () => {
         await Promise.all(imagePreloadPromises);
         console.log("Fetched recommendations:", data);
         setRecommendationsQueue((prevQueue) => [...prevQueue, ...data]);
+
       } else {
         console.error("Failed to fetch recommendations:", response.statusText);
       }
@@ -100,20 +102,24 @@ const HomeScreen = () => {
 
   const preloadSound = async (previewUrl: string) => {
     if (sound) {
-      await sound.unloadAsync(); // Ensure the previous sound is unloaded
+      await sound.unloadAsync(); // Ensure any previous sound is unloaded
     }
     const { sound: newSound } = await Audio.Sound.createAsync(
       { uri: previewUrl },
-      { shouldPlay: false } // Load the sound without playing
+      { shouldPlay: false } // Load without playing immediately
     );
+
+    // Set the current recommendation and sound only if successful
+    // setCurrentRecommendation(nextRecommendation);
     setSound(newSound);
   };
-
+  
   const playCurrentSound = async () => {
     if (sound) {
       await sound.playAsync(); // Play the preloaded sound
     }
   };
+  
 
   useEffect(() => {
     return sound
@@ -143,28 +149,23 @@ const HomeScreen = () => {
   }, [bubbleColor]); // Depend on bubbleColor
 
   const processNextRecommendation = useCallback(() => {
-    if (recommendationsQueue.length > 0) {
-      const nextRecommendation = recommendationsQueue.shift();
-      if (!nextRecommendation) return;
-      setCurrentRecommendation(nextRecommendation);
-      setIsImageLoading(true); // Reset image loading state for new recommendation
+    setRecommendationsQueue((currentQueue) => {
+      const nextRecommendation = currentQueue.shift();
+      const nextQueue = [...currentQueue];
+      if (!nextRecommendation) {
+        return nextQueue;
+      }
+      setCurrentRecommendation(nextRecommendation || null);
+      setIsImageLoading(true); // Indicate that a new image is loading
+      
+      if (nextQueue.length > 0) {
+        preloadSound(nextRecommendation.preview_url); // Preload the sound for the next recommendation
+      }
+      
+      return nextQueue;
+    });
+  }, []);
 
-      // Immediately load the sound for the current recommendation
-      (async () => {
-        if (sound) {
-          await sound.unloadAsync(); // Ensure any previous sound is unloaded
-        }
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: nextRecommendation.preview_url },
-          { shouldPlay: false } // Load without playing
-        );
-        setSound(newSound);
-      })();
-
-      // Ensure the state is updated with the remaining queue
-      setRecommendationsQueue([...recommendationsQueue]);
-    }
-  }, [recommendationsQueue, sound]);
 
   const startNextAnimation = useCallback(() => {
     if (recommendationsQueue.length > 0 && !isPaused) {
@@ -276,25 +277,19 @@ const HomeScreen = () => {
                 console.log("Bubble long-pressed!");
                 cancelAnimation(animationValue);
                 setIsPaused(true);
-                console.log(currentRecommendation.name, currentRecommendation.preview_url);
-                // Play the current sound
-                if (sound) {
-                  sound.playAsync();
-                }
+                console.log(currentRecommendation.preview_url);
+                playCurrentSound(); // Play the sound on press
               }}
               onPressOut={() => {
                 console.log("Long press released!");
                 setIsPaused(false);
-                // Delay to ensure 'isPaused' state is correctly updated before resuming animation
+                // Need a slight delay before resuming to ensure `isPaused` state is updated
                 setTimeout(() => {
                   if (!isPaused) {
                     animateBubble();
                   }
                 }, 100);
-                // Stop the sound
-                if (sound) {
-                  sound.stopAsync();
-                }
+                stopSound(); // Stop the sound on release
               }}
               style={styles.bubble}
             >
