@@ -17,17 +17,24 @@ import Animated, {
   runOnJS,
   cancelAnimation,
   withRepeat,
+  useAnimatedGestureHandler,
 } from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Audio } from "expo-av";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ParamListBase, useNavigation } from "@react-navigation/native";
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+} from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 
 const { width, height } = Dimensions.get("window");
 const bubbleSize = 200;
 const animationDuration = 5000;
 const colors = ["#8ac5f4", "#b1d8f6", "#d2eaf9", "#f6f5ee", "#fafafa"];
+const bannerHeight = 150;
 
 type Recommendation = {
   name: string;
@@ -47,12 +54,13 @@ const HomeScreen = () => {
   const [bubbleColor, setBubbleColor] = useState<string>("");
   const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
   const [isPaused, setIsPaused] = useState(false);
-  const animationValue = useSharedValue(-bubbleSize);
+  const animationValue = useSharedValue(- (bubbleSize * 2));
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const [profilePhoto, setProfilePhoto] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState("http://www.gravatar.com/avatar/?d=retro&s=32");
   const scaleValue = useSharedValue(1);
-  
+  const bannerY = useSharedValue(-bannerHeight);
+  const bannerVisible = useSharedValue(false);
 
   const fetchRecommendations = useCallback(async () => {
     if (isFetching) return; // Prevent multiple fetches
@@ -172,6 +180,23 @@ const HomeScreen = () => {
     scaleValue.value = withTiming(1, { duration: 200 });
   };
 
+  
+  
+
+  const addToLibrary = () => {
+    // Logic to add the recommendation to the library goes here
+    console.log("Adding to library");
+    // Show toast notification
+    Toast.show({
+      type: "success",
+      text1: "Successfully added to library!",
+    });
+
+    // Ensure banner is hidden after adding
+    bannerY.value = withTiming(-bannerHeight, { duration: 300 });
+    bannerVisible.value = false; // Ensure to hide the banner programmatically
+  };
+
   useEffect(() => {
     return sound
       ? () => {
@@ -185,6 +210,12 @@ const HomeScreen = () => {
       playsInSilentModeIOS: true,
     });
   }, []);
+
+  // useEffect(() => {
+  //   if (currentRecommendation && !isPaused) {
+  //     preloadSound(currentRecommendation.preview_url);
+  //   }
+  // }, [currentRecommendation, isPaused]);
 
   const stopSound = async () => {
     if (sound) {
@@ -253,6 +284,61 @@ const HomeScreen = () => {
     );
   }, [isPaused, startNextAnimation]);
 
+  const gestureHandler = useAnimatedGestureHandler({
+    onStart: (_, context) => {
+      context.startY = animationValue.value;
+      // Capture the initial banner position to manage its visibility
+      context.bannerY = bannerY.value;
+    },
+    onActive: (event, context:any) => {
+      const newY = context.startY + event.translationY;
+      animationValue.value = newY;
+      // Dynamically adjust banner visibility based on bubble movement
+      bannerY.value = event.translationY < -0 ? 0 : -bannerHeight;
+      bannerVisible.value = event.translationY < 0;
+    },
+    onEnd: () => {
+      // Check if bubble is within banner bounds
+      if (animationValue.value < bannerHeight && bannerVisible.value) {
+        runOnJS(addToLibrary)();
+        // Reset banner and visibility for safety
+        bannerVisible.value = false;
+        bannerY.value = -bannerHeight;
+        animationValue.value = withTiming(-height, { duration: 0 }, () => {
+          // Bubble is out of view, proceed to prepare for the next bubble
+          runOnJS(startNextAnimation)();
+        });
+        
+      } else {
+        const distanceToBottom = height - animationValue.value;
+        const duration = (distanceToBottom / height) * animationDuration;
+    
+        animationValue.value = withTiming(height, {
+          duration: Math.max(500, duration),
+          easing: Easing.out(Easing.cubic),
+        }, (isFinished) => {
+          if (isFinished) {
+            // Ensure state is stable before proceeding
+            runOnJS(startNextAnimation)();
+          }
+        });
+    
+        // Ensure banner is reset
+        bannerVisible.value = false;
+        bannerY.value = -bannerHeight;
+      }
+    },
+  });
+  
+  
+
+  const bannerStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: bannerY.value }],
+      opacity: withTiming(bannerVisible.value ? 1 : 0, { duration: 300 }),
+    };
+  });
+
   useEffect(() => {
     if (currentRecommendation !== null && !isPaused && !isImageLoading) {
       animateBubble();
@@ -287,84 +373,100 @@ const HomeScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={["#131624", "#333399", "#444655"]}
-        style={styles.background}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-      <View style={styles.profileButtonContainer}>
-        <TouchableOpacity onPress={() => navigation.navigate("ProfileScreen")}>
-          <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
-        </TouchableOpacity>
-      </View>
-      {/* Default bubbles at the top */}
-      <View style={styles.defaultBubblesContainer}>
-        {colors.map((color, index) => (
-          <View
-            key={index}
-            style={[styles.defaultBubble, { backgroundColor: color }]}
-          />
-        ))}
-      </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={["#131624", "#333399", "#444655"]}
+          style={styles.background}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <View style={styles.profileButtonContainer}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ProfileScreen")}
+          >
+            <Image source={{ uri: profilePhoto }} style={styles.profilePhoto} />
+          </TouchableOpacity>
+        </View>
+        {/* Default bubbles at the top */}
+        <View style={styles.defaultBubblesContainer}>
+          {colors.map((color, index) => (
+            <View
+              key={index}
+              style={[styles.defaultBubble, { backgroundColor: color }]}
+            />
+          ))}
+        </View>
 
-      <View style={styles.defaultBubblesContainer2}>
-        {colors.reverse().map((color, index) => (
-          <View
-            key={index}
-            style={[styles.defaultBubble, { backgroundColor: color }]}
-          />
-        ))}
-      </View>
-      <View style={styles.bubbleContainer}>
-        {currentRecommendation && (
-          <Animated.View style={[styles.bubble, animatedStyle]}>
-            <TouchableOpacity
-              onPressIn={() => {
-                console.log("Bubble long-pressed!");
-                cancelAnimation(animationValue);
-                setIsPaused(true);
-                pressInAnimation();
-                console.log(currentRecommendation.preview_url);
-                playCurrentSound(); // Play the sound on press
-              }}
-              onPressOut={() => {
-                console.log("Long press released!");
-                setIsPaused(false);
-                // Need a slight delay before resuming to ensure `isPaused` state is updated
-                pressOutAnimation();
-                setTimeout(() => {
-                  if (!isPaused) {
-                    animateBubble();
-                  }
-                }, 100);
-                stopSound(); // Stop the sound on release
-              }}
-              style={styles.bubble}
-            >
-              <View style={styles.bubbleContent}>
-                <Image
-                  source={{ uri: currentRecommendation.album.images[0].url }}
-                  style={styles.albumArt}
-                  onLoad={() => setIsImageLoading(false)} // Image has loaded
-                />
+        <View style={styles.defaultBubblesContainer2}>
+          {colors.reverse().map((color, index) => (
+            <View
+              key={index}
+              style={[styles.defaultBubble, { backgroundColor: color }]}
+            />
+          ))}
+        </View>
+        <Animated.View style={[styles.banner, bannerStyle]}>
+          <TouchableOpacity onPress={addToLibrary} style={styles.addButton}>
+            <Text style={styles.buttonText}>Add to Library</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-                <Text
-                  style={[
-                    styles.albumName,
-                    { color: getContrastYIQ(bubbleColor) },
-                  ]}
-                  numberOfLines={2}
+        <Toast />
+
+        <View style={styles.bubbleContainer}>
+          {currentRecommendation && (
+            <PanGestureHandler onGestureEvent={gestureHandler}>
+              <Animated.View style={[styles.bubble, animatedStyle]}>
+                <TouchableOpacity
+                  onPressIn={() => {
+                    console.log("Bubble long-pressed!");
+                    cancelAnimation(animationValue);
+                    setIsPaused(true);
+                    pressInAnimation();
+                    console.log(currentRecommendation.preview_url);
+                    playCurrentSound(); // Play the sound on press
+                  }}
+                  onPressOut={() => {
+                    console.log("Long press released!");
+                    setIsPaused(false);
+                    // Need a slight delay before resuming to ensure `isPaused` state is updated
+                    pressOutAnimation();
+                    setTimeout(() => {
+                      if (!isPaused) {
+                        animateBubble();
+                      }
+                    }, 100);
+                    stopSound(); // Stop the sound on release
+                  }}
+                  style={styles.bubble}
                 >
-                  {currentRecommendation.name}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-      </View>
-    </SafeAreaView>
+                  <View style={styles.bubbleContent}>
+                    <Image
+                      source={{
+                        uri: currentRecommendation.album.images[0].url,
+                      }}
+                      style={styles.albumArt}
+                      onLoad={() => setIsImageLoading(false)} // Image has loaded
+                    />
+
+                    <Text
+                      style={[
+                        styles.albumName,
+                        { color: getContrastYIQ(bubbleColor) },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {currentRecommendation.name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            </PanGestureHandler>
+          )}
+        </View>
+      </SafeAreaView>
+    </GestureHandlerRootView>
   );
 };
 
@@ -405,6 +507,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 11,
   },
   bubble: {
     width: bubbleSize,
@@ -454,6 +557,37 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "black",
     shadowColor: "#000",
+  },
+  banner: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: bannerHeight,
+    backgroundColor: "rgba(33, 33, 33, 0.9)", // Translucent deep gray
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  addButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: "#8ac5f4", // Primary button color remains
+    borderRadius: 20, // Rounded corners for the button
+    elevation: 2, // Slight elevation for the button
+  },
+  buttonText: {
+    color: "#FFFFFF", // Bright text color for better visibility
+    fontWeight: "600", // Medium font weight
+    fontSize: 16, // Adequate font size
   },
 });
 
