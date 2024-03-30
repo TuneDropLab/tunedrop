@@ -233,7 +233,11 @@ const HomeScreen = () => {
     };
   }, [bubbleColor]); // Depend on bubbleColor
 
-  const processNextRecommendation = useCallback(() => {
+  const processNextRecommendation = useCallback(async () => {
+    if (sound) {
+      await sound.unloadAsync(); // Unload sound when bubble animation ends
+      setSound(null);
+    }
     setRecommendationsQueue((currentQueue) => {
       const nextRecommendation = currentQueue.shift();
       const nextQueue = [...currentQueue];
