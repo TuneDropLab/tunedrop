@@ -37,6 +37,7 @@ const colors = ["#8ac5f4", "#b1d8f6", "#d2eaf9", "#f6f5ee", "#fafafa"];
 const bannerHeight = 150;
 
 type Recommendation = {
+  id: string;
   name: string;
   preview_url: string;
   album: {
@@ -54,10 +55,12 @@ const HomeScreen = () => {
   const [bubbleColor, setBubbleColor] = useState<string>("");
   const [isFetching, setIsFetching] = useState(false); // New state to track fetching status
   const [isPaused, setIsPaused] = useState(false);
-  const animationValue = useSharedValue(- (bubbleSize * 2));
+  const animationValue = useSharedValue(-(bubbleSize * 2));
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const [profilePhoto, setProfilePhoto] = useState("http://www.gravatar.com/avatar/?d=retro&s=32");
+  const [profilePhoto, setProfilePhoto] = useState(
+    ""
+  );
   const scaleValue = useSharedValue(1);
   const bannerY = useSharedValue(-bannerHeight);
   const bannerVisible = useSharedValue(false);
@@ -82,6 +85,7 @@ const HomeScreen = () => {
       );
       if (response.ok) {
         const data = await response.json();
+        console.log("Fetched recommendations:", data);
         // Preload album images
         const imagePreloadPromises = data.map((rec: Recommendation) =>
           Image.prefetch(rec.album.images[0].url)
@@ -180,21 +184,56 @@ const HomeScreen = () => {
     scaleValue.value = withTiming(1, { duration: 200 });
   };
 
-  
-  
+  const addToLibrary = async () => {
+    if (!currentRecommendation) {
+      console.error("No current recommendation available to add to library.");
+      return;
+    }
 
-  const addToLibrary = () => {
-    // Logic to add the recommendation to the library goes here
-    console.log("Adding to library");
-    // Show toast notification
-    Toast.show({
-      type: "success",
-      text1: "Successfully added to library!",
-    });
+    try {
+      const jwtToken = await AsyncStorage.getItem("@jwt");
+      if (!jwtToken) {
+        throw new Error("JWT token not found");
+      }
 
-    // Ensure banner is hidden after adding
+      
+
+      const response = await fetch("http://localhost:3000/spotify/add-track", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwtToken}`,
+        },
+        body: JSON.stringify({ trackId: currentRecommendation.id }), // Use the track ID of the current recommendation
+      });
+
+      console.log("Response:", response); 
+
+      if (!response.ok) {
+        throw new Error("Failed to add track to library");
+      }
+
+      // Optionally, you can process the response data
+      // const data = await response.json();
+      // console.log(data);
+
+      // Show success notification
+      Toast.show({
+        type: "success",
+        text1: `${currentRecommendation.name} successfully added to library!`,
+      });
+    } catch (error:any) {
+      console.error("Error adding track to library:", error);
+      Toast.show({
+        type: "error",
+        text1: "Failed to add track to library",
+        text2: error.message,
+      });
+    }
+
+    // Whether successful or failed, hide the banner and reset related states
     bannerY.value = withTiming(-bannerHeight, { duration: 300 });
-    bannerVisible.value = false; // Ensure to hide the banner programmatically
+    bannerVisible.value = false;
   };
 
   useEffect(() => {
@@ -294,7 +333,7 @@ const HomeScreen = () => {
       // Capture the initial banner position to manage its visibility
       context.bannerY = bannerY.value;
     },
-    onActive: (event, context:any) => {
+    onActive: (event, context: any) => {
       const newY = context.startY + event.translationY;
       animationValue.value = newY;
       // Dynamically adjust banner visibility based on bubble movement
@@ -312,29 +351,30 @@ const HomeScreen = () => {
           // Bubble is out of view, proceed to prepare for the next bubble
           runOnJS(startNextAnimation)();
         });
-        
       } else {
         const distanceToBottom = height - animationValue.value;
         const duration = (distanceToBottom / height) * animationDuration;
-    
-        animationValue.value = withTiming(height, {
-          duration: Math.max(500, duration),
-          easing: Easing.out(Easing.cubic),
-        }, (isFinished) => {
-          if (isFinished) {
-            // Ensure state is stable before proceeding
-            runOnJS(startNextAnimation)();
+
+        animationValue.value = withTiming(
+          height,
+          {
+            duration: Math.max(500, duration),
+            easing: Easing.out(Easing.cubic),
+          },
+          (isFinished) => {
+            if (isFinished) {
+              // Ensure state is stable before proceeding
+              runOnJS(startNextAnimation)();
+            }
           }
-        });
-    
+        );
+
         // Ensure banner is reset
         bannerVisible.value = false;
         bannerY.value = -bannerHeight;
       }
     },
   });
-  
-  
 
   const bannerStyle = useAnimatedStyle(() => {
     return {

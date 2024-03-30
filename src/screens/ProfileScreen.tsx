@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { useAuthStore } from "../context/AuthContext";
 import { ParamListBase, useNavigation } from "@react-navigation/native";
@@ -19,17 +20,47 @@ import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
+type SavedTrack = {
+  id: string;
+  title: string;
+  release_year: string;
+  artistName: string[];
+  albumArt: string;
+};
+
 function ProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
   const { signOut } = useAuthStore();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savedTracks, setSavedTracks] = useState<SavedTrack[]>([]);
+
   type User = {
     name: string;
     email: string;
     profilePictureUrl: string;
   };
+
+  const fetchSavedTracks = async () => {
+    try {
+      const jwtToken = await AsyncStorage.getItem("@jwt");
+      if (!jwtToken) throw new Error("JWT token not found");
+
+      const response = await fetch("http://localhost:3000/user/saved-tracks", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${jwtToken}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch saved tracks");
+
+      const data = await response.json();
+      setSavedTracks(data);
+    } catch (error: any) {
+      setError(error.message);
+    }
+  };
+
   useEffect(() => {
     const fetchUserProfile = async () => {
       setIsLoading(true);
@@ -54,6 +85,7 @@ function ProfileScreen() {
     };
 
     fetchUserProfile();
+    fetchSavedTracks();
   }, []);
 
   const handleSignOut = () => {
@@ -96,12 +128,14 @@ function ProfileScreen() {
         colors={["#131624", "#333399", "#444655"]}
         style={styles.background}
       />
-      <TouchableOpacity
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      >
-        <Ionicons name="arrow-back" size={24} color="#fff" />
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+      </View>
       <View style={styles.profileCard}>
         <Image
           source={{ uri: user?.profilePictureUrl || "" }}
@@ -113,6 +147,34 @@ function ProfileScreen() {
           <Text style={styles.signOutButtonText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
+
+      <ScrollView style={styles.savedTracksSection}>
+        <Text style={styles.savedTracksHeading}>Saved Tracks</Text>
+
+        {savedTracks.length > 0 ? (
+          savedTracks.map((track, index) => (
+            <React.Fragment key={track.id}>
+              <View style={styles.trackItem}>
+                <Image
+                  source={{ uri: track.albumArt }}
+                  style={styles.trackImage}
+                />
+                <View style={styles.trackInfo}>
+                  <Text style={styles.trackName}>{track.title}</Text>
+                  <Text style={styles.trackDetails}>
+                    {`${track.artistName.join(", ")} · ${track.release_year}`}
+                  </Text>
+                </View>
+              </View>
+              {index < savedTracks.length - 1 && (
+                <View style={styles.trackDivider} />
+              )}
+            </React.Fragment>
+          ))
+        ) : (
+          <Text style={styles.noTracksText}>No saved tracks</Text>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -123,12 +185,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  backButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    padding: 10,
   },
   background: {
     position: "absolute",
@@ -176,6 +232,75 @@ const styles = StyleSheet.create({
   error: {
     color: "red",
     fontSize: 16,
+  },
+  savedTracksSection: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+    width: width - 40,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  savedTracksHeading: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#131624",
+    paddingVertical: 15,
+    textAlign: "center",
+  },
+  trackItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 10,
+  },
+  trackImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  trackInfo: {
+    marginLeft: 15,
+    flex: 1,
+  },
+  trackName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#131624",
+  },
+  trackDetails: {
+    fontSize: 14,
+    color: "#666",
+  },
+  trackDivider: {
+    height: 1,
+    backgroundColor: "#E0E0E0",
+    marginVertical: 5,
+  },
+  noTracksText: {
+    textAlign: "center",
+    padding: 20,
+    color: "#666",
+  },
+  header: {
+    position: 'relative',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 20, // Side padding
+    paddingTop: 20, // Top padding for spacing
+    // zIndex: 100, // Make sure this is above other content
+  },
+  backButton: {
+    width: 44, // Set a specific size for hit-slop
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
