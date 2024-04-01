@@ -26,33 +26,26 @@ Sentry.init({
 const Stack = createStackNavigator();
 
 function App() {
-
   const { isSignedIn, signIn, signOut } = useAuthStore();
-  const [isFirstLaunch, setIsFirstLaunch] = useState<Boolean>(false);
+  const [initialRouteName, setInitialRouteName] = useState<string|null>(null);
 
   useEffect(() => {
-    checkIsFirstLaunch();
-  }, []);
+    const initializeApp = async () => {
+      const alreadyLaunched = await AsyncStorage.getItem("@alreadyLaunched");
+      if (alreadyLaunched === null) {
+        await AsyncStorage.setItem("@alreadyLaunched", "true");
+        setInitialRouteName("OnboardingScreen");
+      } else {
+        setInitialRouteName(isSignedIn ? "HomeScreen" : "SignInScreen");
+      }
+    };
 
-  
-  
-  const checkIsFirstLaunch = async () => {
-    const value = await AsyncStorage.getItem("@alreadyLaunched");
-    if (value === null) {
-      // If "@alreadyLaunched" is not set, it's the first launch
-      AsyncStorage.setItem("@alreadyLaunched", "true"); // Mark as launched
-      setIsFirstLaunch(true);
-    } else {
-      setIsFirstLaunch(false); // Here we make sure the state is updated
-    }
-  };
+    initializeApp();
+  }, [isSignedIn]); // Depend on isSignedIn to correctly set the route upon sign-in status change
 
-  // Determine the initial route based on the states
-  let initialRoute;
-  if (isFirstLaunch === true) {
-    initialRoute = "OnboardingScreen";
-  } else {
-    initialRoute = isSignedIn ? "HomeScreen" : "SignInScreen";
+  // Optional: Show a loading screen or null while determining the initial route
+  if (initialRouteName === null) {
+    return null; // or a loading indicator
   }
 
   return (
@@ -60,13 +53,8 @@ function App() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{ headerShown: false }}
-        initialRouteName={initialRoute}
+        initialRouteName={initialRouteName}
       >
-        <Stack.Screen
-          name="HomeScreen"
-          component={HomeScreen}
-          options={{ title: "Home" }}
-        />
         <Stack.Screen
           name="OnboardingScreen"
           component={OnboardingScreen}
@@ -79,6 +67,11 @@ function App() {
           name="SignInScreen"
           component={SignInScreen}
           options={{ title: "Sign In" }}
+        />
+        <Stack.Screen
+          name="HomeScreen"
+          component={HomeScreen}
+          options={{ title: "Home" }}
         />
         <Stack.Screen
           name="TutorialScreen"
