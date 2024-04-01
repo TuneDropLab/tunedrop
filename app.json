@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "findnewmusic",
-    "slug": "findnewmusic",
+    "name": "tunedrop",
+    "slug": "tunedrop",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
