@@ -89,10 +89,10 @@ function SignInScreen() {
             );
             // await AsyncStorage.setItem('@userInfo', JSON.stringify(userInfo));
             await AsyncStorage.setItem("@jwt", userAuthStuff.params.jwt);
-            const jwt = await AsyncStorage.getItem(
-                "@jwt"
-            );
-            console.log("STORED JWT TOKEN: ", jwt);
+            // const jwt = await AsyncStorage.getItem(
+            //     "@jwt"
+            // );
+            // console.log("STORED JWT TOKEN: ", jwt);
 
             signIn();
             navigation.reset(
