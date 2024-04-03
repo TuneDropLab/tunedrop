@@ -47,7 +47,7 @@ function ProfileScreen() {
       const jwtToken = await AsyncStorage.getItem("@jwt");
       if (!jwtToken) throw new Error("JWT token not found");
 
-      const response = await fetch("http://localhost:3000/user/saved-tracks", {
+      const response = await fetch("https://tunedrop-nest-production.up.railway.app/user/saved-tracks", {
         method: "GET",
         headers: { Authorization: `Bearer ${jwtToken}` },
       });
@@ -68,7 +68,7 @@ function ProfileScreen() {
         const jwtToken = await AsyncStorage.getItem("@jwt");
         if (!jwtToken) throw new Error("JWT token not found");
 
-        const response = await fetch("http://localhost:3000/user/profile", {
+        const response = await fetch("https://tunedrop-nest-production.up.railway.app/user/profile", {
           method: "GET",
           headers: { Authorization: `Bearer ${jwtToken}` },
         });

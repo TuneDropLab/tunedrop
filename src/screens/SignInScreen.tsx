@@ -6,7 +6,6 @@ import {
     SafeAreaView,
     Text,
     Pressable,
-    Platform,
 } from "react-native";
 import {
     ResponseType,
@@ -32,8 +31,8 @@ function SignInScreen() {
     const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: "http://localhost:3000/auth/spotify",
-        tokenEndpoint: "http://localhost:3000/auth/spotify/callback",
+        authorizationEndpoint: "https://tunedrop-nest-production.up.railway.app/auth/spotify",
+        tokenEndpoint: "https://tunedrop-nest-production.up.railway.app/auth/spotify/callback",
     };
 
     // const redirectUri = makeRedirectUri({
@@ -42,7 +41,7 @@ function SignInScreen() {
     //     scheme: "tunedrop",
     //     // useProxy: true
     //     // path: "/auth/spotify/callback",
-    //     // native: "http://localhost:3000/auth/spotify/callback",
+    //     // native: "https://tunedrop-nest-production.up.railway.app/auth/spotify/callback",
     //     // useProxy: true,
     // });
 
@@ -61,11 +60,9 @@ function SignInScreen() {
 
     useEffect(() => {
         console.log("request ", request);
-        if (Platform.OS === 'ios') {
-            WebBrowser.dismissBrowser();
-            WebBrowser.dismissAuthSession();
-            // AuthSession.dismiss();
-        }
+        // WebBrowser.dismissBrowser();
+        // WebBrowser.dismissAuthSession();
+        // AuthSession.dismiss();
         // console.log("RESPONSE BEFORE", response);
         console.log("RESPONSE TYPE: ", response?.type);
 
@@ -133,7 +130,7 @@ function SignInScreen() {
             }
 
             const response = await fetch(
-                "http://localhost:3000/spotify/top-artists",
+                "https://tunedrop-nest-production.up.railway.app/spotify/top-artists",
                 {
                     method: "GET",
                     headers: {

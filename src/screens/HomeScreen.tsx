@@ -41,7 +41,7 @@ type Recommendation = {
   name: string;
   preview_url: string;
   album: {
-    images: { url: string }[];
+    images: { url: string; }[];
     name: string;
   };
 };
@@ -74,7 +74,7 @@ const HomeScreen = () => {
         throw new Error("Access token not found");
       }
       const response = await fetch(
-        "http://localhost:3000/spotify/recommendations",
+        "https://tunedrop-nest-production.up.railway.app/spotify/recommendations",
         {
           method: "GET",
           headers: {
@@ -112,7 +112,7 @@ const HomeScreen = () => {
         return;
       }
 
-      const response = await fetch("http://localhost:3000/user/profile", {
+      const response = await fetch("https://tunedrop-nest-production.up.railway.app/user/profile", {
         method: "GET",
         headers: {
           Authorization: `Bearer ${jwtToken}`,
@@ -196,9 +196,9 @@ const HomeScreen = () => {
         throw new Error("JWT token not found");
       }
 
-      
 
-      const response = await fetch("http://localhost:3000/spotify/add-track", {
+
+      const response = await fetch("https://tunedrop-nest-production.up.railway.app/spotify/add-track", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -207,7 +207,7 @@ const HomeScreen = () => {
         body: JSON.stringify({ trackId: currentRecommendation.id }), // Use the track ID of the current recommendation
       });
 
-      console.log("Response:", response); 
+      console.log("Response:", response);
 
       if (!response.ok) {
         throw new Error("Failed to add track to library");
@@ -222,7 +222,7 @@ const HomeScreen = () => {
         type: "success",
         text1: `${currentRecommendation.name} successfully added to library!`,
       });
-    } catch (error:any) {
+    } catch (error: any) {
       console.error("Error adding track to library:", error);
       Toast.show({
         type: "error",
@@ -239,8 +239,8 @@ const HomeScreen = () => {
   useEffect(() => {
     return sound
       ? () => {
-          sound.unloadAsync();
-        }
+        sound.unloadAsync();
+      }
       : undefined;
   }, [sound]);
 
