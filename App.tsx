@@ -33,7 +33,7 @@ function App() {
     const initializeApp = async () => {
       const alreadyLaunched = await AsyncStorage.getItem("@alreadyLaunched");
       if (alreadyLaunched === null) {
-        await AsyncStorage.setItem("@alreadyLaunched", "true");
+        // await AsyncStorage.setItem("@alreadyLaunched", "true");
         setInitialRouteName("OnboardingScreen");
       } else {
         setInitialRouteName(isSignedIn ? "HomeScreen" : "SignInScreen");
