@@ -24,6 +24,7 @@ import { jwtDecode } from "jwt-decode";
 import "core-js/stable/atob";
 import { useAuthStore } from "../context/AuthContext";
 import * as AuthSession from 'expo-auth-session';
+import {BASE_URL, SPOTIFY_CLIENT_SECRET,  SPOTIFY_CLIENT_ID, REDIRECT_URI } from "@env";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,8 +32,8 @@ function SignInScreen() {
     const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: "https://tunedrop-nest-production.up.railway.app/auth/spotify",
-        tokenEndpoint: "https://tunedrop-nest-production.up.railway.app/auth/spotify/callback",
+        authorizationEndpoint: `${BASE_URL}/auth/spotify`,
+        tokenEndpoint: `${BASE_URL}/auth/spotify/callback`,
     };
 
     // const redirectUri = makeRedirectUri({
@@ -47,13 +48,13 @@ function SignInScreen() {
 
     const [request, response, promptAsync] = useAuthRequest(
         {
-            clientId: process.env.SPOTIFY_CLIENT_ID ?? "",
-            clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+            clientId: SPOTIFY_CLIENT_ID ?? "",
+            clientSecret: SPOTIFY_CLIENT_SECRET,
             // scopes: ['user-read-email', 'playlist-modify-public'],
             // To follow the "Authorization Code Flow" to fetch token after authorizationEndpoint
             // this must be set to false
             usePKCE: false,
-            redirectUri: "exp://192.168.8.125:8081/",
+            redirectUri: REDIRECT_URI,
         },
         discovery
     );
@@ -130,7 +131,7 @@ function SignInScreen() {
             }
 
             const response = await fetch(
-                "https://tunedrop-nest-production.up.railway.app/spotify/top-artists",
+                `${process.env.BASE_URL}/spotify/top-artists`,
                 {
                     method: "GET",
                     headers: {

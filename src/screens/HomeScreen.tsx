@@ -30,6 +30,7 @@ import {
 } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
 
+
 const { width, height } = Dimensions.get("window");
 const bubbleSize = 200;
 const animationDuration = 5000;
@@ -74,7 +75,7 @@ const HomeScreen = () => {
         throw new Error("Access token not found");
       }
       const response = await fetch(
-        "https://tunedrop-nest-production.up.railway.app/spotify/recommendations",
+        `${process.env.BASE_URL}/spotify/recommendations`,
         {
           method: "GET",
           headers: {
@@ -112,7 +113,7 @@ const HomeScreen = () => {
         return;
       }
 
-      const response = await fetch("https://tunedrop-nest-production.up.railway.app/user/profile", {
+      const response = await fetch(`${process.env.BASE_URL}/user/profile`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${jwtToken}`,
@@ -198,7 +199,7 @@ const HomeScreen = () => {
 
 
 
-      const response = await fetch("https://tunedrop-nest-production.up.railway.app/spotify/add-track", {
+      const response = await fetch(`${process.env.BASE_URL}/spotify/add-track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
