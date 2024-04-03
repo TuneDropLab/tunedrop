@@ -29,6 +29,7 @@ import {
   PanGestureHandler,
 } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import {BASE_URL} from "@env";
 
 
 const { width, height } = Dimensions.get("window");
@@ -75,7 +76,7 @@ const HomeScreen = () => {
         throw new Error("Access token not found");
       }
       const response = await fetch(
-        `${process.env.BASE_URL}/spotify/recommendations`,
+        `${BASE_URL}/spotify/recommendations`,
         {
           method: "GET",
           headers: {
@@ -113,7 +114,7 @@ const HomeScreen = () => {
         return;
       }
 
-      const response = await fetch(`${process.env.BASE_URL}/user/profile`, {
+      const response = await fetch(`${BASE_URL}/user/profile`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${jwtToken}`,
@@ -199,7 +200,7 @@ const HomeScreen = () => {
 
 
 
-      const response = await fetch(`${process.env.BASE_URL}/spotify/add-track`, {
+      const response = await fetch(`${BASE_URL}/spotify/add-track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -131,7 +131,7 @@ function SignInScreen() {
             }
 
             const response = await fetch(
-                `${process.env.BASE_URL}/spotify/top-artists`,
+                `${BASE_URL}/spotify/top-artists`,
                 {
                     method: "GET",
                     headers: {

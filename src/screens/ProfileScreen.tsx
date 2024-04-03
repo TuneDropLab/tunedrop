@@ -17,6 +17,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Ionicons } from "@expo/vector-icons";
+import {BASE_URL } from "@env";
+
 
 const { width, height } = Dimensions.get("window");
 
@@ -47,7 +49,7 @@ function ProfileScreen() {
       const jwtToken = await AsyncStorage.getItem("@jwt");
       if (!jwtToken) throw new Error("JWT token not found");
 
-      const response = await fetch(`${process.env.BASE_URL}/user/saved-tracks`, {
+      const response = await fetch(`${BASE_URL}/user/saved-tracks`, {
         method: "GET",
         headers: { Authorization: `Bearer ${jwtToken}` },
       });
@@ -68,7 +70,7 @@ function ProfileScreen() {
         const jwtToken = await AsyncStorage.getItem("@jwt");
         if (!jwtToken) throw new Error("JWT token not found");
 
-        const response = await fetch(`${process.env.BASE_URL}/user/profile`, {
+        const response = await fetch(`${BASE_URL}/user/profile`, {
           method: "GET",
           headers: { Authorization: `Bearer ${jwtToken}` },
         });
