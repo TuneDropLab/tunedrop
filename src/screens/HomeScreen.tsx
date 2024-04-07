@@ -61,7 +61,7 @@ const HomeScreen = () => {
   const [sound, setSound] = useState<Audio.Sound | null>(null); // Sound state
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [profilePhoto, setProfilePhoto] = useState(
-    ""
+    "http://www.gravatar.com/avatar/?d=retro&s=32"
   );
   const scaleValue = useSharedValue(1);
   const bannerY = useSharedValue(-bannerHeight);

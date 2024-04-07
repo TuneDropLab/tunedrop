@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'flex-start',
     paddingHorizontal: 20, // Side padding
-    paddingTop: 20, // Top padding for spacing
+    paddingTop: 40, // Top padding for spacing
     // zIndex: 100, // Make sure this is above other content
   },
   backButton: {
