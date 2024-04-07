@@ -29,7 +29,7 @@ import {
   PanGestureHandler,
 } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
-import {BASE_URL} from "@env";
+
 
 
 const { width, height } = Dimensions.get("window");
@@ -76,7 +76,7 @@ const HomeScreen = () => {
         throw new Error("Access token not found");
       }
       const response = await fetch(
-        `${BASE_URL}/spotify/recommendations`,
+        `${process.env.EXPO_PUBLIC_BASE_URL}/spotify/recommendations`,
         {
           method: "GET",
           headers: {
@@ -114,7 +114,7 @@ const HomeScreen = () => {
         return;
       }
 
-      const response = await fetch(`${BASE_URL}/user/profile`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/user/profile`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${jwtToken}`,
@@ -200,7 +200,7 @@ const HomeScreen = () => {
 
 
 
-      const response = await fetch(`${BASE_URL}/spotify/add-track`, {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_BASE_URL}/spotify/add-track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -420,13 +420,13 @@ const HomeScreen = () => {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.container}>
+      
         <LinearGradient
           colors={["#131624", "#333399", "#444655"]}
           style={styles.background}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-        />
+        >
         <View style={styles.profileButtonContainer}>
           <TouchableOpacity
             onPress={() => navigation.navigate("ProfileScreen")}
@@ -511,7 +511,8 @@ const HomeScreen = () => {
             </PanGestureHandler>
           )}
         </View>
-      </SafeAreaView>
+        </LinearGradient>
+    
     </GestureHandlerRootView>
   );
 };
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: height,
+    height: height + bannerHeight,
   },
   defaultBubblesContainer: {
     flexDirection: "row", // Arrange bubbles in a row
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.5,
     shadowRadius: 5,
-    elevation: 10,
+    // elevation: 10,
     borderWidth: 2,
     borderColor: "white",
   },

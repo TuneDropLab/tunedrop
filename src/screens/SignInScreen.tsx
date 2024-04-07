@@ -23,8 +23,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { jwtDecode } from "jwt-decode";
 import "core-js/stable/atob";
 import { useAuthStore } from "../context/AuthContext";
-import * as AuthSession from 'expo-auth-session';
-import {BASE_URL, SPOTIFY_CLIENT_SECRET,  SPOTIFY_CLIENT_ID, REDIRECT_URI } from "@env";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,35 +30,37 @@ function SignInScreen() {
     const [userAuthObj, setUserAuthObj] = useState<any | null>(null);
     const navigation = useNavigation<NativeStackNavigationProp<ParamListBase>>();
     const discovery = {
-        authorizationEndpoint: `${BASE_URL}/auth/spotify`,
-        tokenEndpoint: `${BASE_URL}/auth/spotify/callback`,
+        authorizationEndpoint: `${process.env.EXPO_PUBLIC_BASE_URL}/auth/spotify`,
+        tokenEndpoint: `${process.env.EXPO_PUBLIC_BASE_URL}/auth/spotify/callback`,
     };
 
-    // const redirectUri = makeRedirectUri({
-    //     preferLocalhost: true,
-    //     // native: "com.example.tunedrop://redirect",
-    //     scheme: "tunedrop",
-    //     // useProxy: true
-    //     // path: "/auth/spotify/callback",
-    //     // native: "https://tunedrop-nest-production.up.railway.app/auth/spotify/callback",
-    //     // useProxy: true,
-    // });
+    const redirectUri = makeRedirectUri({
+        // preferLocalhost: true,
+        // native: "com.example.tunedrop://redirect",
+        scheme: "tunedrop",
+        // path: "/auth/spotify/callback",
+        // native: "https://tunedrop-nest-production.up.railway.app/auth/spotify/callback",
+    });
+
+    // console.log("REDIRECT URI: ", redirectUri);
 
     const [request, response, promptAsync] = useAuthRequest(
         {
-            clientId: SPOTIFY_CLIENT_ID ?? "",
-            clientSecret: SPOTIFY_CLIENT_SECRET,
+            clientId: process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID ?? "",
+            clientSecret: process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_SECRET,
             // scopes: ['user-read-email', 'playlist-modify-public'],
             // To follow the "Authorization Code Flow" to fetch token after authorizationEndpoint
             // this must be set to false
             usePKCE: false,
-            redirectUri: REDIRECT_URI,
+            redirectUri: redirectUri ?? "",
         },
         discovery
     );
 
     useEffect(() => {
         console.log("request ", request);
+    //    console.log(process.env.EXPO_PUBLIC_REDIRECT_URI);
+
         // WebBrowser.dismissBrowser();
         // WebBrowser.dismissAuthSession();
         // AuthSession.dismiss();
@@ -131,7 +131,7 @@ function SignInScreen() {
             }
 
             const response = await fetch(
-                `${BASE_URL}/spotify/top-artists`,
+                `${process.env.EXPO_PUBLIC_BASE_URL}/spotify/top-artists`,
                 {
                     method: "GET",
                     headers: {
