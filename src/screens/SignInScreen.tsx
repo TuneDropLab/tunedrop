@@ -59,7 +59,7 @@ function SignInScreen() {
 
     useEffect(() => {
         console.log("request ", request);
-    //    console.log(process.env.EXPO_PUBLIC_REDIRECT_URI);
+        //    console.log(process.env.EXPO_PUBLIC_REDIRECT_URI);
 
         // WebBrowser.dismissBrowser();
         // WebBrowser.dismissAuthSession();
@@ -78,10 +78,16 @@ function SignInScreen() {
         if (userAuthObj !== null) {
             console.log(`[USER AUTH OBJ]: `, userAuthObj);
             const jwt = userAuthObj.params.jwt;
+            console.log("JWT IS NULL??? WHY??:   ", jwt);
             storeAuthInfo(userAuthObj);
-            getTopArtists();
         }
     }, [userAuthObj]);
+
+
+    useEffect(() => {
+        getTopArtists();
+
+    });
 
     const storeAuthInfo = async (userAuthStuff: any) => {
         try {
@@ -125,10 +131,12 @@ function SignInScreen() {
     const getTopArtists = async () => {
         try {
             const jwtToken = await AsyncStorage.getItem("@jwt");
-            console.log("JWT", jwtToken);
+            console.log("JWT hehe", jwtToken);
+            console.log("JWT hehe", jwtToken);
             if (!jwtToken) {
-                throw new Error("Access token not found");
+                throw new Error("Access token not found....");
             }
+
 
             const response = await fetch(
                 `${process.env.EXPO_PUBLIC_BASE_URL}/spotify/top-artists`,
