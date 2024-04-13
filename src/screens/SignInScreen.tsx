@@ -83,12 +83,6 @@ function SignInScreen() {
         }
     }, [userAuthObj]);
 
-
-    useEffect(() => {
-        getTopArtists();
-
-    });
-
     const storeAuthInfo = async (userAuthStuff: any) => {
         try {
             // Decode JWT to get user info
@@ -111,7 +105,7 @@ function SignInScreen() {
             //     "@jwt"
             // );
             // console.log("STORED JWT TOKEN: ", jwt);
-
+            getTopArtists();
             signIn();
             navigation.reset({
                 index: 0,
@@ -134,7 +128,7 @@ function SignInScreen() {
             console.log("JWT hehe", jwtToken);
             console.log("JWT hehe", jwtToken);
             if (!jwtToken) {
-                throw new Error("Access token not found....");
+                throw new Error("JWT not found....");
             }
 
 
