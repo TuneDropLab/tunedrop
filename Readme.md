@@ -1,4 +1,3 @@
-![Simulator Screenshot - iPhone 15 - 2024-04-19 at 14 08 13](https://github.com/TuneDropLab/tunedrop/assets/51761485/71824b5c-f0f4-4cc4-9723-a9e24df5c90b)
 # Tunedrop
 
 Vision: To create an engaging and gamified app that helps users discover new music based on their preferences and listening history.
