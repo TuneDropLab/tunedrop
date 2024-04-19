@@ -30,8 +30,7 @@ After git clone;
 
 ```bash
   cd tunedrop
-  npm install tunedrop![Simulator Screenshot - iPhone 15 - 2024-04-13 at 18 01 18](https://github.com/TuneDropLab/tunedrop/assets/51761485/afb4d870-66ae-4740-aacc-f723575d71bd)
-
+  npm install tunedrop
   npx expo start -c
 ```
 
